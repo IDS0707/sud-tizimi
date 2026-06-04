@@ -1,0 +1,93 @@
+"""UDIP application entry point (TZ section 9: ``main.py``).
+
+Run locally with:
+
+    uvicorn main:app --reload
+
+or simply:
+
+    python main.py
+"""
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app import __version__
+from app.api.router import api_router
+from app.config import settings
+from app.utils.logger import get_logger
+
+log = get_logger("udip.main")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup / shutdown hooks."""
+    log.info("Starting %s v%s (env=%s)", settings.app_name, __version__, settings.app_env)
+    settings.ensure_dirs()
+    # Database tables are created lazily here once the DB layer lands.
+    try:
+        from app.database.session import init_db
+
+        init_db()
+        log.info("Database initialised: %s", settings.database_url.split("@")[-1])
+    except Exception as exc:  # pragma: no cover - DB layer optional at this stage
+        log.warning("Database not initialised yet: %s", exc)
+    yield
+    log.info("Shutting down %s", settings.app_name)
+
+
+app = FastAPI(
+    title=settings.app_name,
+    version=__version__,
+    description=(
+        "Universal Document Intelligence Platform — OCR, search, AI analysis "
+        "and document parsing. See the technical specification for details."
+    ),
+    lifespan=lifespan,
+)
+
+# CORS — open during development so the bundled frontend can call the API.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"] if settings.debug else [],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount the versioned API (e.g. /api/v1/...).
+app.include_router(api_router, prefix=settings.api_prefix)
+
+
+@app.get("/", tags=["health"], summary="Service banner")
+async def root() -> dict[str, object]:
+    """Human-friendly root with quick links."""
+    return {
+        "app": settings.app_name,
+        "version": __version__,
+        "status": "running",
+        "docs": "/docs",
+        "api_prefix": settings.api_prefix,
+    }
+
+
+@app.get("/health", tags=["health"], summary="Health check")
+async def health() -> JSONResponse:
+    """Readiness probe used by orchestrators / load balancers."""
+    return JSONResponse({"status": "healthy", "version": __version__})
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug,
+    )

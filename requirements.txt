@@ -1,0 +1,44 @@
+# ==========================================================
+#  UDIP — Universal Document Intelligence Platform
+#  Python dependencies
+# ==========================================================
+
+# --- Core web framework ---
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9          # file uploads
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+
+# --- Database ---
+sqlalchemy>=2.0.25
+# PostgreSQL driver (optional — SQLite is the zero-config default)
+psycopg2-binary>=2.9.9 ; platform_system != "Windows"
+
+# --- File / document parsing ---
+python-docx>=1.1.0               # DOCX
+openpyxl>=3.1.2                  # XLSX
+python-pptx>=0.6.23              # PPTX
+pandas>=2.2.0                    # tabular data
+PyMuPDF>=1.23.0                  # PDF text + render
+striprtf>=0.0.26                 # RTF
+
+# --- Images / OCR (heavy, optional at runtime) ---
+Pillow>=10.2.0
+opencv-python-headless>=4.9.0
+# PaddleOCR + PP-Structure stack — install separately if GPU/CPU OCR is needed:
+#   pip install paddlepaddle paddleocr
+# The OCR engine gracefully degrades to a stub when these are absent.
+
+# --- Cache (optional — in-memory fallback by default) ---
+redis>=5.0.0
+
+# --- Object storage (optional — local FS fallback by default) ---
+minio>=7.2.0
+
+# --- Utilities ---
+python-dotenv>=1.0.0
+httpx>=0.27.0
+
+# --- Testing ---
+pytest>=8.0.0
