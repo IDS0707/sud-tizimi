@@ -14,12 +14,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.api.router import api_router
-from app.config import settings
+from app.config import BASE_DIR, settings
 from app.utils.logger import get_logger
+
+WEB_DIR = BASE_DIR / "web"
 
 log = get_logger("udip.main")
 
@@ -63,10 +66,23 @@ app.add_middleware(
 # Mount the versioned API (e.g. /api/v1/...).
 app.include_router(api_router, prefix=settings.api_prefix)
 
+# Serve the web interface (TZ section 4: three-column UI).
+if WEB_DIR.exists():
+    app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
-@app.get("/", tags=["health"], summary="Service banner")
-async def root() -> dict[str, object]:
-    """Human-friendly root with quick links."""
+
+@app.get("/", include_in_schema=False)
+async def root() -> FileResponse:
+    """Serve the single-page web application."""
+    index = WEB_DIR / "index.html"
+    if index.exists():
+        return FileResponse(index)
+    return JSONResponse({"app": settings.app_name, "version": __version__, "docs": "/docs"})
+
+
+@app.get("/api", tags=["health"], summary="Service banner")
+async def api_banner() -> dict[str, object]:
+    """Machine-friendly banner with quick links."""
     return {
         "app": settings.app_name,
         "version": __version__,

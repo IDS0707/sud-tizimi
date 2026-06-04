@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UDIP — Universal Document Intelligence Platform</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>" />
+</head>
+<body>
+  <!-- ===== Top bar: logo + always-visible search (TZ 4.4) ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-logo">📄</span>
+      <div class="brand-text">
+        <strong>UDIP</strong>
+        <small>Hujjat Intellekti Platformasi</small>
+      </div>
+    </div>
+
+    <form id="search-form" class="search" role="search">
+      <span class="search-icon">🔍</span>
+      <input id="search-input" type="search" autocomplete="off"
+             placeholder="Barcha hujjatlar ichidan qidirish… (masalan: salom)" />
+      <button type="submit" class="btn btn-search">Qidirish</button>
+    </form>
+
+    <div class="topbar-actions">
+      <span id="engine-badge" class="badge badge-muted" title="OCR mexanizmi">OCR: …</span>
+      <a href="/docs" target="_blank" class="btn btn-ghost">API</a>
+    </div>
+  </header>
+
+  <!-- ===== Three columns (TZ 4) ===== -->
+  <main class="layout">
+
+    <!-- Left: files (TZ 4.1) -->
+    <aside class="panel panel-left">
+      <div class="panel-head">
+        <h2>Fayllar</h2>
+        <button id="upload-btn" class="btn btn-primary btn-sm">+ Yuklash</button>
+        <input id="file-input" type="file" hidden
+               accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,.xlsx,.pptx,.txt,.rtf" />
+      </div>
+      <div id="dropzone" class="dropzone">
+        Fayllarni shu yerga tashlang yoki <em>Yuklash</em> tugmasini bosing
+      </div>
+      <ul id="file-list" class="file-list"></ul>
+    </aside>
+
+    <!-- Center: viewer (TZ 4.2) -->
+    <section class="panel panel-center">
+      <div class="panel-head">
+        <h2 id="viewer-title">Ko'rish</h2>
+        <div id="viewer-meta" class="viewer-meta"></div>
+      </div>
+      <div id="viewer" class="viewer">
+        <div class="empty-state">
+          <div class="empty-icon">🗂️</div>
+          <p>Chapdagi ro'yxatdan hujjat tanlang yoki yangi fayl yuklang.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: results (TZ 4.3) -->
+    <aside class="panel panel-right">
+      <nav class="tabs">
+        <button class="tab active" data-tab="search">Qidiruv</button>
+        <button class="tab" data-tab="ocr">OCR</button>
+        <button class="tab" data-tab="ai">AI</button>
+        <button class="tab" data-tab="meta">Ma'lumot</button>
+      </nav>
+      <div class="tab-body">
+        <div id="tab-search" class="tab-pane active">
+          <p class="hint">Yuqoridagi qatordan kalit so'z qidiring.</p>
+          <ul id="search-results" class="result-list"></ul>
+        </div>
+        <div id="tab-ocr" class="tab-pane">
+          <p class="hint">Hujjat tanlanганda OCR natijalari shu yerda ko'rinadi.</p>
+          <div id="ocr-results"></div>
+        </div>
+        <div id="tab-ai" class="tab-pane">
+          <p class="hint">AI tahlili keyingi bosqichda (V5) ulanadi.</p>
+          <div id="ai-results"></div>
+        </div>
+        <div id="tab-meta" class="tab-pane">
+          <div id="meta-results" class="meta-grid"></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Toasts -->
+  <div id="toast" class="toast"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
