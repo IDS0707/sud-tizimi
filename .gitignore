@@ -52,3 +52,7 @@ Thumbs.db
 
 # --- Extracted helper artifacts ---
 _TZ_extracted.txt
+_diag.py
+
+# --- Tesseract language data (large binaries, downloaded locally) ---
+.tessdata/

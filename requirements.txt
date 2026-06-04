@@ -23,12 +23,16 @@ pandas>=2.2.0                    # tabular data
 PyMuPDF>=1.23.0                  # PDF text + render
 striprtf>=0.0.26                 # RTF
 
-# --- Images / OCR (heavy, optional at runtime) ---
+# --- Images / OCR ---
 Pillow>=10.2.0
 opencv-python-headless>=4.9.0
-# PaddleOCR + PP-Structure stack — install separately if GPU/CPU OCR is needed:
-#   pip install paddlepaddle paddleocr
-# The OCR engine gracefully degrades to a stub when these are absent.
+# OCR backends (the engine tries them in order; any one enables real OCR):
+#   1) PaddleOCR (best quality):   pip install paddlepaddle paddleocr
+#   2) Tesseract (lightweight):    pip install pytesseract  +  Tesseract binary
+#        Windows: winget install UB-Mannheim.TesseractOCR
+#        Extra langs (uzb/rus): drop *.traineddata into ./.tessdata
+# Without any backend the engine degrades to a harmless stub.
+pytesseract>=0.3.10
 
 # --- Cache (optional — in-memory fallback by default) ---
 redis>=5.0.0

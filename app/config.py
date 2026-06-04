@@ -67,9 +67,17 @@ class Settings(BaseSettings):
     }
 
     # --- OCR ---
-    ocr_lang: str = "en"          # PaddleOCR language code, e.g. "en", "ru", "ch"
+    # Language(s) for OCR. For Tesseract you can combine with "+",
+    # e.g. "uzb+rus+eng". For PaddleOCR use a single code like "en"/"ru".
+    ocr_lang: str = "uzb+rus+eng"
     ocr_use_gpu: bool = False
-    ocr_min_confidence: float = 0.5
+    ocr_min_confidence: float = 0.3
+    # Optional explicit paths (auto-detected if left None). A project-local
+    # ``.tessdata`` directory (extra language packs) is picked up automatically.
+    tesseract_cmd: str | None = None
+    tessdata_dir: str | None = (
+        str(BASE_DIR / ".tessdata") if (BASE_DIR / ".tessdata").exists() else None
+    )
 
     # --- AI / RAG ---
     ai_provider: str = "stub"     # stub | anthropic | openai

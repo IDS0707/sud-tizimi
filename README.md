@@ -84,8 +84,27 @@ python main.py
 ```
 
 So'ng oching:
+- Web interfeys: <http://localhost:8000>
+- Boshqaruv paneli: <http://localhost:8000/admin>
 - Swagger UI: <http://localhost:8000/docs>
-- Health: <http://localhost:8000/health>
+
+### 🔤 Haqiqiy OCR (rasm/skandan matn) — ixtiyoriy
+
+Standart holatda OCR **stub** rejimida (bo'sh matn). Rasmlardan matn olish uchun
+OCR mexanizmini o'rnating (engine ularni avtomatik tanlaydi):
+
+```powershell
+# Variant A — Tesseract (yengil, tavsiya etiladi):
+pip install pytesseract
+winget install UB-Mannheim.TesseractOCR
+# O'zbek/rus tillari: *.traineddata fayllarni ./.tessdata ga joylang
+#   (https://github.com/tesseract-ocr/tessdata)
+
+# Variant B — PaddleOCR (eng sifatli, og'irroq):
+pip install paddlepaddle paddleocr
+```
+
+OCR tili `.env` da: `OCR_LANG=uzb+rus+eng` (Tesseract uchun `+` bilan birlashtiriladi).
 
 ## 🔌 API yo'nalishlari (TZ — 7-bo'lim)
 

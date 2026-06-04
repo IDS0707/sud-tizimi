@@ -77,23 +77,55 @@ class _PaddleBackend:
         )
 
 
+# Common Windows install locations for the Tesseract binary.
+_TESSERACT_PATHS = (
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+)
+# Map short language codes to Tesseract's 3-letter codes (pass-through otherwise).
+_TESS_LANG_MAP = {"en": "eng", "ru": "rus", "uz": "uzb", "ch": "chi_sim"}
+
+
+def _resolve_tess_lang(lang: str) -> str:
+    """Allow 'uzb+rus+eng' (pass-through) or short codes like 'en' -> 'eng'."""
+    if "+" in lang or len(lang) > 3:
+        return lang
+    return _TESS_LANG_MAP.get(lang, lang)
+
+
 class _TesseractBackend:
     name = "tesseract"
 
     def __init__(self, lang: str) -> None:
-        import pytesseract  # noqa: F401  (import check)
+        import os
 
-        self.lang = lang
+        import pytesseract
+
+        # Point pytesseract at the binary (config, then common install paths).
+        cmd = settings.tesseract_cmd
+        if not cmd:
+            cmd = next((p for p in _TESSERACT_PATHS if os.path.exists(p)), None)
+        if cmd:
+            pytesseract.pytesseract.tesseract_cmd = cmd
+
+        # Point Tesseract at extra language packs via env var (handles paths
+        # with spaces, unlike the space-split --tessdata-dir config option).
+        if settings.tessdata_dir:
+            os.environ["TESSDATA_PREFIX"] = settings.tessdata_dir
+
+        # Verify the engine actually runs (raises if not installed).
+        pytesseract.get_tesseract_version()
+
+        self.lang = _resolve_tess_lang(lang)
         self._pt = pytesseract
+        self._config = ""
 
     def run(self, image_path: str) -> OcrOutput:
         from PIL import Image
 
         img = Image.open(image_path)
-        # Map common language codes to Tesseract's 3-letter codes.
-        tess_lang = {"en": "eng", "ru": "rus", "uz": "uzb", "ch": "chi_sim"}.get(self.lang)
         data = self._pt.image_to_data(
-            img, lang=tess_lang, output_type=self._pt.Output.DICT
+            img, lang=self.lang, config=self._config, output_type=self._pt.Output.DICT
         )
         boxes: list[dict] = []
         texts: list[str] = []
