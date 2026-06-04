@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.api import documents, ocr, task, upload
+
 api_router = APIRouter()
 
 
@@ -16,7 +18,10 @@ async def ping() -> dict[str, str]:
     return {"status": "ok", "message": "pong"}
 
 
-# Sub-routers (added incrementally as subsystems land):
-#   from app.api import upload, ocr, parse, search, chat, export, task
-#   api_router.include_router(upload.router)
-#   ...
+# --- V1 subsystems: upload, OCR, tasks, document browsing ---
+api_router.include_router(upload.router)
+api_router.include_router(ocr.router)
+api_router.include_router(task.router)
+api_router.include_router(documents.router)
+
+# Added in later milestones: parse, search, chat, export, admin.
