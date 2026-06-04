@@ -6,8 +6,12 @@ New parsers register themselves here as they are implemented across the roadmap
 from __future__ import annotations
 
 from app.parsers.base import BaseParser, ParseResult
+from app.parsers.docx_parser import docx_parser
 from app.parsers.image_parser import image_parser
 from app.parsers.pdf_parser import pdf_parser
+from app.parsers.pptx_parser import pptx_parser
+from app.parsers.text_parser import text_parser
+from app.parsers.xlsx_parser import xlsx_parser
 from app.utils.logger import get_logger
 
 log = get_logger("udip.parsers.registry")
@@ -24,6 +28,12 @@ def register(parser: BaseParser) -> None:
 # --- V1 parsers ---
 register(pdf_parser)
 register(image_parser)
+
+# --- V2 parsers (Office + text) ---
+register(docx_parser)
+register(xlsx_parser)
+register(pptx_parser)
+register(text_parser)
 
 
 def get_parser(extension: str) -> BaseParser | None:

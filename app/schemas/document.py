@@ -17,6 +17,7 @@ class PageOut(BaseModel):
     width: float | None = None
     height: float | None = None
     image_path: str | None = None
+    layout: dict | None = None  # {"blocks": [{type, text|rows}, ...]}
 
 
 class DocumentOut(BaseModel):

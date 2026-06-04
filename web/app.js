@@ -115,18 +115,60 @@ function renderViewer(doc) {
   } else if (doc.file_type === "pdf") {
     viewer.innerHTML = `<iframe src="${fileUrl}#view=fitH" title="PDF"></iframe>`;
   } else if (doc.pages && doc.pages.length) {
-    // Text-based formats (docx/xlsx/pptx/txt/...): render extracted page text.
+    // Text-based formats (docx/xlsx/pptx/txt/...): render structured blocks.
     viewer.innerHTML = "";
     for (const p of doc.pages) {
       const block = el("div", "page-block");
-      block.innerHTML = `<div class="page-num">Sahifa ${p.page_number}</div>` +
-        `<div>${esc(p.text || "(matn yo'q)")}</div>`;
+      block.appendChild(el("div", "page-num", `Sahifa ${p.page_number}`));
+      block.appendChild(renderBlocks(p));
       viewer.appendChild(block);
     }
   } else {
     viewer.innerHTML = `<div class="empty-state"><p>Ko'rish uchun mazmun yo'q.</p>
       <a class="btn btn-ghost" href="${fileUrl}" target="_blank">Faylni ochish</a></div>`;
   }
+}
+
+function renderBlocks(page) {
+  // Render structured layout blocks if present, else fall back to plain text.
+  const wrap = el("div");
+  const blocks = page.layout && page.layout.blocks;
+  if (!blocks || !blocks.length) {
+    wrap.innerHTML = esc(page.text || "(matn yo'q)").replace(/\n/g, "<br>");
+    return wrap;
+  }
+  for (const b of blocks) {
+    if (b.type === "heading") {
+      const h = el("h3"); h.style.margin = "12px 0 6px"; h.textContent = b.text;
+      wrap.appendChild(h);
+    } else if (b.type === "table" && b.rows) {
+      wrap.appendChild(renderTable(b.rows));
+    } else if (b.type === "notes") {
+      const n = el("div"); n.style.cssText = "color:#64748b;font-style:italic;margin:8px 0";
+      n.textContent = "Izoh: " + b.text; wrap.appendChild(n);
+    } else if (b.text) {
+      const p = el("p"); p.style.margin = "4px 0"; p.textContent = b.text;
+      wrap.appendChild(p);
+    }
+  }
+  return wrap;
+}
+
+function renderTable(rows) {
+  const t = el("table");
+  t.style.cssText = "border-collapse:collapse;margin:8px 0;width:100%;font-size:13px";
+  rows.forEach((row, i) => {
+    const tr = el("tr");
+    row.forEach((cell) => {
+      const td = el(i === 0 ? "th" : "td");
+      td.textContent = cell;
+      td.style.cssText = "border:1px solid #e2e8f0;padding:5px 8px;text-align:left" +
+        (i === 0 ? ";background:#f8fafc;font-weight:600" : "");
+      tr.appendChild(td);
+    });
+    t.appendChild(tr);
+  });
+  return t;
 }
 
 function renderOcrTab(doc) {
