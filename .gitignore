@@ -56,3 +56,4 @@ _diag.py
 
 # --- Tesseract language data (large binaries, downloaded locally) ---
 .tessdata/
+_ocr_test*
