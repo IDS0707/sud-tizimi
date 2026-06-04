@@ -25,8 +25,21 @@ def available() -> bool:
     return _HAS_CV2
 
 
+# Below this longest-side size (px) text is too small; upscale helps OCR.
+_MIN_LONG_SIDE = 1500
+_TARGET_LONG_SIDE = 1800
+
+
 def preprocess_image(src_path: str | Path, out_path: str | Path | None = None) -> str:
-    """Return a path to a cleaned image suitable for OCR.
+    """Return a path to an image tuned for OCR.
+
+    Testing on real screenshots showed that aggressive binarisation
+    (adaptive threshold + denoise) *hurts* accuracy on clean/digital images.
+    So the strategy is deliberately gentle:
+
+      * Large, already-crisp images  -> used as-is (best results).
+      * Small images                 -> upscaled (Tesseract reads big text
+                                        far better than tiny text).
 
     If OpenCV is unavailable the source path is returned untouched.
     """
@@ -39,16 +52,19 @@ def preprocess_image(src_path: str | Path, out_path: str | Path | None = None) -
         if img is None:
             return str(src_path)
 
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        # Light denoise then adaptive threshold to crisp up text edges.
-        gray = cv2.fastNlMeansDenoising(gray, h=10)
-        thresh = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 15
-        )
-        deskewed = _deskew(thresh)
+        h, w = img.shape[:2]
+        longest = max(h, w)
+        if longest >= _MIN_LONG_SIDE:
+            # Clean / high-res image: leave it alone — preprocessing only hurts.
+            return str(src_path)
+
+        # Small image: upscale (cubic) and grayscale to help recognition.
+        scale = _TARGET_LONG_SIDE / max(longest, 1)
+        up = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        gray = cv2.cvtColor(up, cv2.COLOR_BGR2GRAY)
 
         out = Path(out_path) if out_path else src_path.with_name(src_path.stem + "_pre.png")
-        cv2.imwrite(str(out), deskewed)
+        cv2.imwrite(str(out), gray)
         return str(out)
     except Exception as exc:  # pragma: no cover
         log.warning("Preprocess failed (%s); using original image", exc)

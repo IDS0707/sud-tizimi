@@ -72,11 +72,12 @@ class Settings(BaseSettings):
     ocr_lang: str = "uzb+rus+eng"
     ocr_use_gpu: bool = False
     ocr_min_confidence: float = 0.3
-    # Optional explicit paths (auto-detected if left None). A project-local
-    # ``.tessdata`` directory (extra language packs) is picked up automatically.
+    # Optional explicit paths (auto-detected if left None). Prefer the more
+    # accurate ``.tessdata_best`` models, then fall back to ``.tessdata``.
     tesseract_cmd: str | None = None
     tessdata_dir: str | None = (
-        str(BASE_DIR / ".tessdata") if (BASE_DIR / ".tessdata").exists() else None
+        str(BASE_DIR / ".tessdata_best") if (BASE_DIR / ".tessdata_best").exists()
+        else (str(BASE_DIR / ".tessdata") if (BASE_DIR / ".tessdata").exists() else None)
     )
 
     # --- AI / RAG ---
