@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api import documents, ocr, parse, task, upload
+from app.api import documents, formula, ocr, parse, search, task, upload
 
 api_router = APIRouter()
 
@@ -27,4 +27,8 @@ api_router.include_router(documents.router)
 # --- V2 subsystem: document parsing (Office + text) ---
 api_router.include_router(parse.router)
 
-# Added in later milestones: search, chat, export, admin.
+# --- V4 subsystems: smart search + formula OCR ---
+api_router.include_router(search.router)
+api_router.include_router(formula.router)
+
+# Added in later milestones: chat, export, admin.

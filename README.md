@@ -105,7 +105,7 @@ So'ng oching:
 - [x] **Web UI** — 3 ustunli brauzer interfeysi ✅
 - [x] **V2** — DOCX/XLSX/PPTX/TXT/RTF tahlili ✅
 - [x] **V3** — Layout tahlili, jadvallarni tanib olish ✅
-- [ ] **V4** — Formula OCR, kengaytirilgan qidiruv
+- [x] **V4** — Formula OCR, aqlli qidiruv ✅
 - [ ] **V5** — AI chat, RAG
 - [ ] **V6** — SaaS, API kalitlari, boshqaruv paneli
 
