@@ -31,7 +31,7 @@ const STATUS_BADGE = {
   failed: ["badge-red", "Xato"],
 };
 
-let state = { docs: [], active: null };
+let state = { docs: [], active: null, activeDoc: null };
 
 function toast(msg, kind = "") {
   const t = $("#toast");
@@ -94,12 +94,14 @@ async function selectDocument(publicId) {
   viewer.innerHTML = '<div class="empty-state"><span class="spinner"></span></div>';
   try {
     const doc = await api(`/documents/${publicId}`);
+    state.activeDoc = doc;
     $("#viewer-title").textContent = doc.filename;
     $("#viewer-meta").textContent =
       `${doc.file_type.toUpperCase()} · ${doc.page_count} sahifa · ${doc.status}`;
     renderViewer(doc);
     renderOcrTab(doc);
     renderMetaTab(doc);
+    resetAiTab();
   } catch (e) {
     viewer.innerHTML = `<div class="empty-state"><p>Xato: ${esc(e.message)}</p></div>`;
   }
@@ -268,6 +270,80 @@ function renderSearchResults(results, query) {
   }
 }
 
+// ---- AI: summary, entities, chat, export (V5) ----------------------
+function resetAiTab() {
+  $("#ai-summary").innerHTML = "";
+  $("#ai-entities").innerHTML = "";
+  $("#chat-log").innerHTML = "";
+}
+
+function _needDoc() {
+  if (!state.activeDoc) { toast("Avval hujjat tanlang", "err"); return null; }
+  return state.activeDoc;
+}
+
+async function doSummary() {
+  const doc = _needDoc(); if (!doc) return;
+  const box = $("#ai-summary");
+  box.innerHTML = '<span class="spinner"></span> Xulosa tayyorlanmoqda…';
+  try {
+    const r = await api("/ai/summarize", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ document_id: doc.id, max_sentences: 5 }),
+    });
+    box.innerHTML = `<strong>Xulosa (${esc(r.model)}):</strong><br>${esc(r.summary) || "—"}`;
+  } catch (e) { box.innerHTML = `<span class="hint">Xato: ${esc(e.message)}</span>`; }
+}
+
+async function doEntities() {
+  const doc = _needDoc(); if (!doc) return;
+  const box = $("#ai-entities");
+  box.innerHTML = '<span class="spinner"></span> Ajratilmoqda…';
+  try {
+    const r = await api(`/ai/entities/${doc.id}`, { method: "POST" });
+    if (!r.count) { box.innerHTML = '<span class="hint">Muhim ma\'lumot topilmadi.</span>'; return; }
+    const labels = { date: "sana", money: "summa", email: "email", phone: "tel", percent: "%" };
+    box.innerHTML = `<strong>${r.count} ta topildi:</strong><br>` + r.entities.map((e) =>
+      `<span class="entity-chip"><span class="et">${labels[e.entity_type] || e.entity_type}</span>${esc(e.value)}</span>`
+    ).join("");
+  } catch (e) { box.innerHTML = `<span class="hint">Xato: ${esc(e.message)}</span>`; }
+}
+
+async function doChat(question) {
+  const doc = _needDoc(); if (!doc) return;
+  const logEl = $("#chat-log");
+  const entry = el("div", "chat-msg");
+  entry.innerHTML = `<div class="chat-q">❓ ${esc(question)}</div>
+    <div class="chat-a"><span class="spinner"></span></div>`;
+  logEl.appendChild(entry);
+  logEl.scrollTop = logEl.scrollHeight;
+  try {
+    const r = await api("/chat", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, document_id: doc.id }),
+    });
+    const src = (r.sources || []).map((s) => `s.${s.page_number ?? "—"}`).join(", ");
+    entry.querySelector(".chat-a").innerHTML =
+      `💡 ${esc(r.answer)}` + (src ? `<div class="chat-src">Manba: ${src}</div>` : "");
+  } catch (e) {
+    entry.querySelector(".chat-a").innerHTML = `<span class="hint">Xato: ${esc(e.message)}</span>`;
+  }
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function doExport(fmt) {
+  const doc = _needDoc(); if (!doc) return;
+  toast(`${fmt.toUpperCase()} eksport qilinmoqda…`);
+  try {
+    const r = await api("/export", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ document_id: doc.id, format: fmt }),
+    });
+    toast("Eksport tayyor: " + r.filename, "ok");
+    window.open(r.download_url, "_blank");
+  } catch (e) { toast("Eksport xatosi: " + e.message, "err"); }
+}
+
 // ---- tabs ----------------------------------------------------------
 function switchTab(name) {
   $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
@@ -298,6 +374,16 @@ function init() {
 
   $("#search-form").onsubmit = (e) => { e.preventDefault(); doSearch($("#search-input").value); };
   $$(".tab").forEach((t) => (t.onclick = () => switchTab(t.dataset.tab)));
+
+  // AI tab (V5)
+  $("#btn-summary").onclick = doSummary;
+  $("#btn-entities").onclick = doEntities;
+  $("#chat-form").onsubmit = (e) => {
+    e.preventDefault();
+    const q = $("#chat-input").value.trim();
+    if (q) { doChat(q); $("#chat-input").value = ""; }
+  };
+  $$(".export-btn").forEach((b) => (b.onclick = () => doExport(b.dataset.fmt)));
 
   loadDocuments();
   loadEngineStatus();

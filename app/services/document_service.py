@@ -18,7 +18,7 @@ from app.database.models import Document, DocStatus, OcrResult, Page
 from app.ocr import structure
 from app.ocr.engine import ocr_engine
 from app.parsers.registry import parse_file
-from app.services import file_detector, index_service, layout_service
+from app.services import entity_service, file_detector, index_service, layout_service
 from app.services.storage import storage
 from app.utils.logger import get_logger
 
@@ -134,6 +134,12 @@ def process_document(db: Session, document_id: int, *, run_ocr: bool = True,
         doc.status = DocStatus.PARSED
     db.commit()
     db.refresh(doc)
+
+    # Auto-extract entities (cheap, regex-based) so "important data" is ready.
+    try:
+        entity_service.extract_for_document(db, doc.id)
+    except Exception as exc:  # pragma: no cover - non-fatal enrichment
+        log.warning("Entity extraction failed for document %d: %s", doc.id, exc)
     log.info(
         "Processed document %d: %d pages, %d OCR-ed, status=%s",
         document_id, result.page_count, ocr_pages, doc.status,

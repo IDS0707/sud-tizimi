@@ -106,7 +106,7 @@ So'ng oching:
 - [x] **V2** — DOCX/XLSX/PPTX/TXT/RTF tahlili ✅
 - [x] **V3** — Layout tahlili, jadvallarni tanib olish ✅
 - [x] **V4** — Formula OCR, aqlli qidiruv ✅
-- [ ] **V5** — AI chat, RAG
+- [x] **V5** — AI tahlili, entity, chat (RAG), eksport ✅
 - [ ] **V6** — SaaS, API kalitlari, boshqaruv paneli
 
 *(Belgilar bosqichlar tugagan sari yangilanadi.)*

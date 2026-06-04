@@ -166,6 +166,28 @@ body {
 .ocr-box-head { font-size: 11px; color: var(--text-mut); display: flex; justify-content: space-between; }
 .ocr-box-text { font-size: 13px; margin-top: 6px; white-space: pre-wrap; }
 
+/* ---------- AI tab ---------- */
+.ai-section { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+.ai-section:last-child { border-bottom: none; }
+.ai-title { margin: 0 0 8px; font-size: 13px; }
+.ai-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.ai-output { font-size: 13px; line-height: 1.55; }
+.ai-output:not(:empty) { margin-top: 8px; padding: 10px; background: var(--panel-2);
+  border-radius: 8px; border: 1px solid var(--border); }
+.entity-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px;
+  padding: 3px 8px; margin: 3px 3px 0 0; border-radius: 999px; background: #eef2ff; color: #4338ca; }
+.entity-chip .et { font-size: 9px; text-transform: uppercase; opacity: .7; }
+
+.chat-log { max-height: 240px; overflow-y: auto; margin-bottom: 8px; }
+.chat-msg { margin-bottom: 8px; }
+.chat-q { font-weight: 600; font-size: 13px; color: var(--primary); }
+.chat-a { font-size: 13px; line-height: 1.5; margin-top: 2px; }
+.chat-src { font-size: 11px; color: var(--text-mut); margin-top: 4px; }
+.chat-form { display: flex; gap: 6px; }
+.chat-form input { flex: 1; border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font: inherit; font-size: 13px; outline: none; }
+.chat-form input:focus { border-color: var(--primary); }
+
 .meta-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .meta-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px;
   padding: 8px 0; border-bottom: 1px dashed var(--border); }

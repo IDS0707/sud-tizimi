@@ -7,7 +7,18 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api import documents, formula, ocr, parse, search, task, upload
+from app.api import (
+    ai,
+    chat,
+    documents,
+    export,
+    formula,
+    ocr,
+    parse,
+    search,
+    task,
+    upload,
+)
 
 api_router = APIRouter()
 
@@ -31,4 +42,9 @@ api_router.include_router(parse.router)
 api_router.include_router(search.router)
 api_router.include_router(formula.router)
 
-# Added in later milestones: chat, export, admin.
+# --- V5 subsystems: AI analysis, chat (RAG), export ---
+api_router.include_router(ai.router)
+api_router.include_router(chat.router)
+api_router.include_router(export.router)
+
+# Added in later milestones: admin / API keys.

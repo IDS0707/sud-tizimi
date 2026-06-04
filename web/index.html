@@ -80,8 +80,33 @@
           <div id="ocr-results"></div>
         </div>
         <div id="tab-ai" class="tab-pane">
-          <p class="hint">AI tahlili keyingi bosqichda (V5) ulanadi.</p>
-          <div id="ai-results"></div>
+          <div class="ai-section">
+            <div class="ai-actions">
+              <button type="button" id="btn-summary" class="btn btn-primary btn-sm">📝 Xulosa</button>
+              <button type="button" id="btn-entities" class="btn btn-ghost btn-sm">🔖 Muhim ma'lumotlar</button>
+            </div>
+            <div id="ai-summary" class="ai-output"></div>
+            <div id="ai-entities" class="ai-output"></div>
+          </div>
+
+          <div class="ai-section">
+            <h4 class="ai-title">💬 Hujjat bilan suhbat</h4>
+            <div id="chat-log" class="chat-log"></div>
+            <form id="chat-form" class="chat-form">
+              <input id="chat-input" type="text" placeholder="Hujjat haqida savol bering…" autocomplete="off" />
+              <button type="submit" class="btn btn-primary btn-sm">Yuborish</button>
+            </form>
+          </div>
+
+          <div class="ai-section">
+            <h4 class="ai-title">📤 Eksport</h4>
+            <div class="ai-actions">
+              <button type="button" class="btn btn-ghost btn-sm export-btn" data-fmt="txt">TXT</button>
+              <button type="button" class="btn btn-ghost btn-sm export-btn" data-fmt="json">JSON</button>
+              <button type="button" class="btn btn-ghost btn-sm export-btn" data-fmt="md">Markdown</button>
+              <button type="button" class="btn btn-ghost btn-sm export-btn" data-fmt="docx">DOCX</button>
+            </div>
+          </div>
         </div>
         <div id="tab-meta" class="tab-pane">
           <div id="meta-results" class="meta-grid"></div>
