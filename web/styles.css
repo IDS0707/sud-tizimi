@@ -166,6 +166,17 @@ body {
 .ocr-box-head { font-size: 11px; color: var(--text-mut); display: flex; justify-content: space-between; }
 .ocr-box-text { font-size: 13px; margin-top: 6px; white-space: pre-wrap; }
 
+/* ---------- Matn (Text) tab ---------- */
+.text-tab-head { display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 10px; }
+.text-output { font-size: 13.5px; line-height: 1.6; }
+.text-page { margin-bottom: 14px; }
+.text-page-num { font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--text-mut); background: var(--panel-2); padding: 3px 8px;
+  border-radius: 6px; display: inline-block; margin-bottom: 6px; }
+.text-page-body { white-space: pre-wrap; word-break: break-word; color: var(--text);
+  border-left: 3px solid var(--border); padding-left: 10px; }
+
 /* ---------- AI tab ---------- */
 .ai-section { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
 .ai-section:last-child { border-bottom: none; }

@@ -31,7 +31,7 @@ const STATUS_BADGE = {
   failed: ["badge-red", "Xato"],
 };
 
-let state = { docs: [], active: null, activeDoc: null };
+let state = { docs: [], active: null, activeDoc: null, activeText: "" };
 
 function toast(msg, kind = "") {
   const t = $("#toast");
@@ -99,9 +99,10 @@ async function selectDocument(publicId) {
     $("#viewer-meta").textContent =
       `${doc.file_type.toUpperCase()} · ${doc.page_count} sahifa · ${doc.status}`;
     renderViewer(doc);
-    renderOcrTab(doc);
+    renderTextTab(doc);
     renderMetaTab(doc);
     resetAiTab();
+    switchTab("text");   // hujjat tanlanganda matnni ko'rsatamiz
   } catch (e) {
     viewer.innerHTML = `<div class="empty-state"><p>Xato: ${esc(e.message)}</p></div>`;
   }
@@ -173,21 +174,39 @@ function renderTable(rows) {
   return t;
 }
 
-function renderOcrTab(doc) {
-  const box = $("#ocr-results");
-  const scanned = (doc.pages || []).filter((p) => (p.text || "").trim().length);
-  if (!scanned.length) {
-    box.innerHTML = '<p class="hint">Bu hujjatda OCR/matn natijasi topilmadi.</p>';
+function renderTextTab(doc) {
+  const box = $("#text-output");
+  const info = $("#text-info");
+  const withText = (doc.pages || []).filter((p) => (p.text || "").trim().length);
+  const fullText = (doc.pages || []).map((p) => p.text || "").join("\n\n").trim();
+  state.activeText = fullText;
+
+  if (!withText.length) {
+    const isImage = doc.category === "image" || doc.file_type === "pdf";
+    info.textContent = "Matn topilmadi";
+    box.innerHTML = `<p class="hint">Bu hujjatdan matn ajratilmadi.` +
+      (isImage ? " Skan/rasm bo'lsa OCR mexanizmi kerak (Tesseract/PaddleOCR)." : "") +
+      `</p>`;
     return;
   }
+
+  info.textContent = `${doc.page_count} sahifa · ${fullText.length.toLocaleString()} belgi`;
   box.innerHTML = "";
   for (const p of doc.pages) {
     if (!(p.text || "").trim()) continue;
-    const b = el("div", "ocr-box");
-    b.innerHTML = `<div class="ocr-box-head"><span>Sahifa ${p.page_number}</span></div>
-      <div class="ocr-box-text">${esc(p.text)}</div>`;
-    box.appendChild(b);
+    const block = el("div", "text-page");
+    block.innerHTML =
+      `<div class="text-page-num">Sahifa ${p.page_number}</div>` +
+      `<div class="text-page-body">${esc(p.text)}</div>`;
+    box.appendChild(block);
   }
+}
+
+function copyActiveText() {
+  if (!state.activeText) { toast("Nusxalanadigan matn yo'q", "err"); return; }
+  navigator.clipboard.writeText(state.activeText)
+    .then(() => toast("Matn nusxalandi ✓", "ok"))
+    .catch(() => toast("Nusxalab bo'lmadi (brauzer ruxsati)", "err"));
 }
 
 function renderMetaTab(doc) {
@@ -374,6 +393,9 @@ function init() {
 
   $("#search-form").onsubmit = (e) => { e.preventDefault(); doSearch($("#search-input").value); };
   $$(".tab").forEach((t) => (t.onclick = () => switchTab(t.dataset.tab)));
+
+  // Matn tab
+  $("#btn-copy-text").onclick = copyActiveText;
 
   // AI tab (V5)
   $("#btn-summary").onclick = doSummary;

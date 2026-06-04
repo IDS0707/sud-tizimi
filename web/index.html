@@ -66,19 +66,22 @@
     <!-- Right: results (TZ 4.3) -->
     <aside class="panel panel-right">
       <nav class="tabs">
-        <button class="tab active" data-tab="search">Qidiruv</button>
-        <button class="tab" data-tab="ocr">OCR</button>
-        <button class="tab" data-tab="ai">AI</button>
-        <button class="tab" data-tab="meta">Ma'lumot</button>
+        <button class="tab active" data-tab="text">📄 Matn</button>
+        <button class="tab" data-tab="search">🔍 Qidiruv</button>
+        <button class="tab" data-tab="ai">🤖 AI</button>
+        <button class="tab" data-tab="meta">ℹ️ Ma'lumot</button>
       </nav>
       <div class="tab-body">
-        <div id="tab-search" class="tab-pane active">
+        <div id="tab-text" class="tab-pane active">
+          <div class="text-tab-head">
+            <span id="text-info" class="hint">Chapdan hujjat tanlang — uning matni shu yerda chiqadi.</span>
+            <button type="button" id="btn-copy-text" class="btn btn-ghost btn-sm" title="Matnni nusxalash">📋 Nusxa</button>
+          </div>
+          <div id="text-output" class="text-output"></div>
+        </div>
+        <div id="tab-search" class="tab-pane">
           <p class="hint">Yuqoridagi qatordan kalit so'z qidiring.</p>
           <ul id="search-results" class="result-list"></ul>
-        </div>
-        <div id="tab-ocr" class="tab-pane">
-          <p class="hint">Hujjat tanlanganda OCR natijalari shu yerda ko'rinadi.</p>
-          <div id="ocr-results"></div>
         </div>
         <div id="tab-ai" class="tab-pane">
           <div class="ai-section">
