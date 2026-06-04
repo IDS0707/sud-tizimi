@@ -80,9 +80,37 @@ function renderFileList() {
         <div class="file-name" title="${esc(d.filename)}">${esc(d.filename)}</div>
         <div class="file-sub">${d.page_count} sahifa · ${(d.size_bytes/1024).toFixed(0)} KB</div>
       </div>
-      <span class="badge ${badgeCls}">${badgeTxt}</span>`;
+      <span class="badge ${badgeCls}">${badgeTxt}</span>
+      <button class="file-del" title="O'chirish">✕</button>`;
     li.onclick = () => selectDocument(d.public_id);
+    li.querySelector(".file-del").onclick = (e) => {
+      e.stopPropagation();
+      deleteDocument(d.public_id, d.filename);
+    };
     list.appendChild(li);
+  }
+}
+
+async function deleteDocument(publicId, name) {
+  if (!confirm(`"${name}" o'chirilsinmi? Bu amalni qaytarib bo'lmaydi.`)) return;
+  try {
+    await api(`/documents/${publicId}`, { method: "DELETE" });
+    toast("O'chirildi: " + name, "ok");
+    if (state.active === publicId) {
+      state.active = null;
+      state.activeDoc = null;
+      state.activeText = "";
+      $("#viewer").innerHTML =
+        '<div class="empty-state"><div class="empty-icon">🗂️</div>' +
+        '<p>Hujjat tanlang yoki yangi fayl yuklang.</p></div>';
+      $("#viewer-title").textContent = "Ko'rish";
+      $("#viewer-meta").textContent = "";
+      $("#text-output").innerHTML = "";
+      $("#text-info").textContent = "Chapdan hujjat tanlang.";
+    }
+    await loadDocuments();
+  } catch (e) {
+    toast("O'chirishda xato: " + e.message, "err");
   }
 }
 
@@ -114,7 +142,19 @@ function renderViewer(doc) {
   const cat = doc.category;
 
   if (cat === "image") {
-    viewer.innerHTML = `<img src="${fileUrl}" alt="${esc(doc.filename)}" />`;
+    // Image + its extracted (OCR) text right below — always visible,
+    // even if the right results panel is hidden on narrow screens.
+    const text = (doc.pages || []).map((p) => p.text || "").join("\n").trim();
+    const body = text
+      ? esc(text).replace(/\n/g, "<br>")
+      : `<span class="muted">Matn topilmadi. Skan/rasm OCR mexanizmi kerak ` +
+        `(Tesseract/PaddleOCR o'rnatilgan bo'lsa avtomatik o'qiydi).</span>`;
+    viewer.innerHTML =
+      `<img src="${fileUrl}" alt="${esc(doc.filename)}" />` +
+      `<div class="viewer-text">` +
+      `<div class="viewer-text-head">📄 Rasmdan o'qilgan matn (OCR)` +
+      (text ? ` <span class="muted">— ${text.length} belgi</span>` : "") + `</div>` +
+      `<div class="viewer-text-body">${body}</div></div>`;
   } else if (doc.file_type === "pdf") {
     viewer.innerHTML = `<iframe src="${fileUrl}#view=fitH" title="PDF"></iframe>`;
   } else if (doc.pages && doc.pages.length) {
