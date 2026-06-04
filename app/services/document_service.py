@@ -15,9 +15,10 @@ from typing import BinaryIO
 from sqlalchemy.orm import Session
 
 from app.database.models import Document, DocStatus, OcrResult, Page
+from app.ocr import structure
 from app.ocr.engine import ocr_engine
 from app.parsers.registry import parse_file
-from app.services import file_detector, index_service
+from app.services import file_detector, index_service, layout_service
 from app.services.storage import storage
 from app.utils.logger import get_logger
 
@@ -111,6 +112,15 @@ def process_document(db: Session, document_id: int, *, run_ocr: bool = True,
                 engine=out.engine,
                 lang=out.lang,
             ))
+            # Layout analysis + table detection (V3):
+            #   PP-Structure if installed, else heuristic from OCR boxes.
+            layout = None
+            if structure.is_available():
+                layout = structure.analyze(parsed.image_path)
+            if layout is None and out.boxes:
+                layout = layout_service.analyze_page_from_ocr(out.boxes, parsed.page_number)
+            if layout:
+                page.layout = {"blocks": layout["blocks"]}
             ocr_pages += 1
 
         # Index the page text (parser text or OCR text).

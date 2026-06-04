@@ -104,7 +104,7 @@ So'ng oching:
 - [x] **V1** — PNG/JPG/PDF uchun OCR ✅
 - [x] **Web UI** — 3 ustunli brauzer interfeysi ✅
 - [x] **V2** — DOCX/XLSX/PPTX/TXT/RTF tahlili ✅
-- [ ] **V3** — Layout tahlili, jadvallarni tanib olish
+- [x] **V3** — Layout tahlili, jadvallarni tanib olish ✅
 - [ ] **V4** — Formula OCR, kengaytirilgan qidiruv
 - [ ] **V5** — AI chat, RAG
 - [ ] **V6** — SaaS, API kalitlari, boshqaruv paneli

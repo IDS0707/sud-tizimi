@@ -14,7 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.config import settings
-from app.parsers.base import BaseParser, ParsedPage, ParseResult
+from app.parsers.base import BaseParser, ParsedPage, ParseResult, ParsedTable
 from app.utils.logger import get_logger
 
 log = get_logger("udip.parsers.pdf")
@@ -72,12 +72,94 @@ class PdfParser(BaseParser):
                     parsed.image_path = str(img_path)
                 except Exception as exc:  # pragma: no cover
                     log.warning("Failed to render page %d: %s", i + 1, exc)
+            else:
+                # Text page — analyse layout (headings) and detect tables.
+                parsed.blocks = self._layout_blocks(page)
+                for rows in self._extract_tables(page):
+                    result.tables.append(ParsedTable(page_number=i + 1, rows=rows))
+                    parsed.blocks.append({"type": "table", "rows": rows})
             result.pages.append(parsed)
 
         doc.close()
         scanned = sum(1 for p in result.pages if p.needs_ocr)
-        log.info("Parsed PDF %s: %d pages (%d need OCR)", file_path, result.page_count, scanned)
+        log.info(
+            "Parsed PDF %s: %d pages (%d need OCR, %d tables)",
+            file_path, result.page_count, scanned, len(result.tables),
+        )
         return result
+
+    # ------------------------------------------------------------------ #
+    #  Layout & table helpers (TZ 2.6 / 2.7)
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _layout_blocks(page) -> list[dict]:
+        """Classify a text page's blocks into headings vs body by font size."""
+        try:
+            data = page.get_text("dict")
+        except Exception:  # pragma: no cover
+            return []
+
+        # Body font size = the size carrying the most characters (body text
+        # dominates by volume; a short large-font title must not skew this).
+        from collections import Counter
+
+        size_chars: Counter = Counter()
+        for blk in data.get("blocks", []):
+            for line in blk.get("lines", []):
+                for span in line.get("spans", []):
+                    txt = span.get("text", "").strip()
+                    if txt:
+                        size_chars[round(span.get("size", 0) * 2) / 2] += len(txt)
+        if not size_chars:
+            return []
+        body_size = max(size_chars, key=size_chars.get)
+        heading_size = body_size * 1.2
+
+        blocks: list[dict] = []
+        for blk in data.get("blocks", []):
+            if blk.get("type") != 0:  # 0 = text block (1 = image)
+                if blk.get("type") == 1:
+                    blocks.append({"type": "image", "bbox": list(blk.get("bbox", []))})
+                continue
+            lines_text: list[str] = []
+            max_size = 0.0
+            bold = False
+            for line in blk.get("lines", []):
+                spans = line.get("spans", [])
+                lines_text.append("".join(s.get("text", "") for s in spans))
+                for s in spans:
+                    max_size = max(max_size, s.get("size", 0))
+                    if "bold" in (s.get("font", "").lower()):
+                        bold = True
+            text = "\n".join(t for t in lines_text if t.strip()).strip()
+            if not text:
+                continue
+            is_heading = (max_size >= heading_size or (bold and len(text) < 80))
+            blocks.append({
+                "type": "heading" if is_heading else "text",
+                "text": text,
+                "bbox": list(blk.get("bbox", [])),
+            })
+        return blocks
+
+    @staticmethod
+    def _extract_tables(page) -> list[list[list[str]]]:
+        """Extract tables from a text page using PyMuPDF's table finder."""
+        out: list[list[list[str]]] = []
+        try:
+            finder = page.find_tables()
+        except Exception:  # pragma: no cover - older PyMuPDF / odd PDFs
+            return out
+        for tbl in getattr(finder, "tables", []):
+            try:
+                rows = tbl.extract()
+            except Exception:  # pragma: no cover
+                continue
+            clean = [["" if c is None else str(c).strip() for c in row] for row in rows]
+            clean = [r for r in clean if any(c for c in r)]
+            if len(clean) >= 1:
+                out.append(clean)
+        return out
 
 
 pdf_parser = PdfParser()
