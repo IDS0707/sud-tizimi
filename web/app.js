@@ -431,7 +431,20 @@ function init() {
     dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("dragover"); }));
   dz.addEventListener("drop", (e) => { if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
 
-  $("#search-form").onsubmit = (e) => { e.preventDefault(); doSearch($("#search-input").value); };
+  // Live search — natija yozayotganda darhol chiqadi (Search bosish shart emas).
+  let searchTimer = null;
+  const runLiveSearch = (q) => {
+    clearTimeout(searchTimer);
+    if (!q.trim()) { doSearch(""); return; }          // bo'sh bo'lsa darhol tozalaymiz
+    searchTimer = setTimeout(() => doSearch(q), 250);  // ~250ms kechikish (debounce)
+  };
+  $("#search-input").addEventListener("input", (e) => runLiveSearch(e.target.value));
+  // Enter / tugma bosilsa — darhol (kechikishsiz) qidiramiz.
+  $("#search-form").onsubmit = (e) => {
+    e.preventDefault();
+    clearTimeout(searchTimer);
+    doSearch($("#search-input").value);
+  };
   $$(".tab").forEach((t) => (t.onclick = () => switchTab(t.dataset.tab)));
 
   // Matn tab
