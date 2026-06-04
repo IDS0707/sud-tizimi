@@ -3,33 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UDIP — Universal Document Intelligence Platform</title>
+  <title>UDIP — Sud Hujjatlari Intellekti Tizimi</title>
   <link rel="stylesheet" href="/static/styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>" />
 </head>
 <body>
   <!-- ===== Top bar: logo + always-visible search (TZ 4.4) ===== -->
   <header class="topbar">
     <div class="brand">
-      <span class="brand-logo">📄</span>
+      <span class="brand-logo">⚖️</span>
       <div class="brand-text">
         <strong>UDIP</strong>
-        <small>Hujjat Intellekti Platformasi</small>
+        <small>Sud Hujjatlari Intellekti Tizimi</small>
       </div>
     </div>
 
     <form id="search-form" class="search" role="search">
-      <span class="search-icon">🔍</span>
+      <svg class="search-icon" viewBox="0 0 24 24" width="17" height="17" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.6" y2="16.6"></line>
+      </svg>
       <input id="search-input" type="search" autocomplete="off"
-             placeholder="Barcha hujjatlar ichidan qidirish… (masalan: salom)" />
+             placeholder="Sud hujjatlari ichidan qidirish…  (yozing — natija o'zi chiqadi)" />
       <button type="submit" class="btn btn-search">Qidirish</button>
     </form>
 
-    <div class="topbar-actions">
-      <span id="engine-badge" class="badge badge-muted" title="OCR mexanizmi">OCR: …</span>
-      <a href="/admin" class="btn btn-ghost">⚙️ Admin</a>
-      <a href="/docs" target="_blank" class="btn btn-ghost">API</a>
-    </div>
+    <!-- O'ng tomon: muvozanat uchun bo'sh joy (boshqaruv paneli yashirin) -->
+    <div class="topbar-spacer" aria-hidden="true"></div>
   </header>
 
   <!-- ===== Three columns (TZ 4) ===== -->
@@ -45,6 +45,12 @@
       </div>
       <div id="dropzone" class="dropzone">
         Fayllarni shu yerga tashlang yoki <em>Yuklash</em> tugmasini bosing
+      </div>
+      <div class="filter-bar">
+        <input id="filter-name" class="filter-input" type="search" placeholder="Nom bo'yicha qidirish…" />
+        <select id="filter-type" class="filter-select" title="Hujjat turi bo'yicha filtr" aria-label="Hujjat turi bo'yicha filtr">
+          <option value="">Barcha turlar</option>
+        </select>
       </div>
       <ul id="file-list" class="file-list"></ul>
     </aside>
@@ -66,18 +72,51 @@
     <!-- Right: results (TZ 4.3) -->
     <aside class="panel panel-right">
       <nav class="tabs">
-        <button class="tab active" data-tab="text">📄 Matn</button>
-        <button class="tab" data-tab="search">🔍 Qidiruv</button>
-        <button class="tab" data-tab="ai">🤖 AI</button>
-        <button class="tab" data-tab="meta">ℹ️ Ma'lumot</button>
+        <button type="button" class="tab active" data-tab="text">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+          <span>Matn</span>
+        </button>
+        <button type="button" class="tab" data-tab="summary">
+          <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="15" y2="12"/><line x1="4" y1="18" x2="10" y2="18"/></svg>
+          <span>Xulosa</span>
+        </button>
+        <button type="button" class="tab" data-tab="search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+          <span>Qidiruv</span>
+        </button>
+        <button type="button" class="tab" data-tab="ai">
+          <svg viewBox="0 0 24 24"><path d="M12 3l1.7 5.3 5.3 1.7-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7z"/></svg>
+          <span>AI</span>
+        </button>
+        <button type="button" class="tab" data-tab="meta">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="7.6" r="1" fill="currentColor" stroke="none"/></svg>
+          <span>Ma'lumot</span>
+        </button>
       </nav>
       <div class="tab-body">
         <div id="tab-text" class="tab-pane active">
           <div class="text-tab-head">
             <span id="text-info" class="hint">Chapdan hujjat tanlang — uning matni shu yerda chiqadi.</span>
-            <button type="button" id="btn-copy-text" class="btn btn-ghost btn-sm" title="Matnni nusxalash">📋 Nusxa</button>
+            <button type="button" id="btn-copy-text" class="btn btn-ghost btn-sm" title="Matnni nusxalash">Nusxa olish</button>
           </div>
           <div id="text-output" class="text-output"></div>
+        </div>
+
+        <div id="tab-summary" class="tab-pane">
+          <div class="sum-head">
+            <h4 class="ai-title">Hujjat xulosasi</h4>
+            <p class="hint">Uzun matnning qisqacha mazmuni — eng muhim gaplar ajratib beriladi.</p>
+          </div>
+          <div class="sum-controls">
+            <label class="sum-label" for="sum-length">Hajm:</label>
+            <select id="sum-length" class="sum-select" title="Xulosa hajmi" aria-label="Xulosa hajmi">
+              <option value="3">Qisqa — 3 gap</option>
+              <option value="5" selected>O'rtacha — 5 gap</option>
+              <option value="8">Batafsil — 8 gap</option>
+            </select>
+            <button type="button" id="btn-make-summary" class="btn btn-primary btn-sm">Xulosa chiqarish</button>
+          </div>
+          <div id="summary-output" class="sum-output"></div>
         </div>
         <div id="tab-search" class="tab-pane">
           <p class="hint">Yuqoridagi qatordan kalit so'z qidiring.</p>
@@ -85,16 +124,16 @@
         </div>
         <div id="tab-ai" class="tab-pane">
           <div class="ai-section">
+            <h4 class="ai-title">Muhim ma'lumotlar</h4>
+            <p class="hint">Hujjatdan sana, summa, telefon, e-pochta avtomatik ajratiladi.</p>
             <div class="ai-actions">
-              <button type="button" id="btn-summary" class="btn btn-primary btn-sm">📝 Xulosa</button>
-              <button type="button" id="btn-entities" class="btn btn-ghost btn-sm">🔖 Muhim ma'lumotlar</button>
+              <button type="button" id="btn-entities" class="btn btn-primary btn-sm">Ajratib berish</button>
             </div>
-            <div id="ai-summary" class="ai-output"></div>
             <div id="ai-entities" class="ai-output"></div>
           </div>
 
           <div class="ai-section">
-            <h4 class="ai-title">💬 Hujjat bilan suhbat</h4>
+            <h4 class="ai-title">Hujjat bilan suhbat</h4>
             <div id="chat-log" class="chat-log"></div>
             <form id="chat-form" class="chat-form">
               <input id="chat-input" type="text" placeholder="Hujjat haqida savol bering…" autocomplete="off" />
@@ -103,7 +142,7 @@
           </div>
 
           <div class="ai-section">
-            <h4 class="ai-title">📤 Eksport</h4>
+            <h4 class="ai-title">Eksport</h4>
             <div class="ai-actions">
               <button type="button" class="btn btn-ghost btn-sm export-btn" data-fmt="txt">TXT</button>
               <button type="button" class="btn btn-ghost btn-sm export-btn" data-fmt="json">JSON</button>
@@ -113,6 +152,17 @@
           </div>
         </div>
         <div id="tab-meta" class="tab-pane">
+          <div class="court-edit">
+            <h4 class="ai-title">Sud hujjati ma'lumotlari</h4>
+            <label class="ce-label" for="ce-type">Hujjat turi</label>
+            <select id="ce-type" class="ce-input" aria-label="Hujjat turi"></select>
+            <label class="ce-label" for="ce-case">Ish raqami</label>
+            <input id="ce-case" class="ce-input" type="text" placeholder="masalan: 2-1234/2026" />
+            <label class="ce-label" for="ce-note">Izoh</label>
+            <textarea id="ce-note" class="ce-input" rows="2" placeholder="Qo'shimcha izoh…"></textarea>
+            <button type="button" id="ce-save" class="btn btn-primary btn-sm">Saqlash</button>
+          </div>
+          <div class="meta-divider">Fayl ma'lumotlari</div>
           <div id="meta-results" class="meta-grid"></div>
         </div>
       </div>

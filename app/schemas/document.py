@@ -35,6 +35,10 @@ class DocumentOut(BaseModel):
     page_count: int
     status: str
     created_at: datetime
+    # Court-specific (read from doc_metadata)
+    doc_type: str | None = None
+    case_number: str | None = None
+    note: str | None = None
 
 
 class DocumentDetail(DocumentOut):
@@ -42,6 +46,14 @@ class DocumentDetail(DocumentOut):
 
     doc_metadata: dict | None = None
     pages: list[PageOut] = []
+
+
+class DocumentUpdate(BaseModel):
+    """Editable court fields (stored into doc_metadata)."""
+
+    doc_type: str | None = None       # ariza | qaror | bayonnoma | dalil | ...
+    case_number: str | None = None    # ish raqami
+    note: str | None = None           # izoh
 
 
 class UploadResponse(BaseModel):

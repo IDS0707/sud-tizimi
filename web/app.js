@@ -31,7 +31,31 @@ const STATUS_BADGE = {
   failed: ["badge-red", "Xato"],
 };
 
-let state = { docs: [], active: null, activeDoc: null, activeText: "" };
+// Court document types (sud hujjat turlari)
+const DOC_TYPES = {
+  ariza: "Ariza / Da'vo",
+  qaror: "Sud qarori",
+  bayonnoma: "Bayonnoma",
+  dalil: "Dalil / Hujjat",
+  shartnoma: "Shartnoma",
+  hisobot: "Hisobot",
+  boshqa: "Boshqa",
+};
+
+let state = {
+  docs: [], active: null, activeDoc: null, activeText: "",
+  filter: { name: "", type: "" },
+};
+
+function matchesFilter(d) {
+  const f = state.filter;
+  if (f.type && d.doc_type !== f.type) return false;
+  if (f.name) {
+    const hay = ((d.filename || "") + " " + (d.case_number || "")).toLowerCase();
+    if (!hay.includes(f.name)) return false;
+  }
+  return true;
+}
 
 function toast(msg, kind = "") {
   const t = $("#toast");
@@ -70,17 +94,23 @@ function renderFileList() {
     list.appendChild(el("li", "hint", "Hali hujjat yo'q. Yuqoridan fayl yuklang."));
     return;
   }
-  for (const d of state.docs) {
-    const [badgeCls, badgeTxt] = STATUS_BADGE[d.status] || ["badge-muted", d.status];
+  const docs = state.docs.filter(matchesFilter);
+  if (!docs.length) {
+    list.appendChild(el("li", "hint", "Filtrga mos hujjat topilmadi."));
+    return;
+  }
+  for (const d of docs) {
     const li = el("li", "file-item" + (state.active === d.public_id ? " active" : ""));
     li.dataset.id = d.public_id;
+    const typeChip = d.doc_type
+      ? `<span class="type-chip">${esc(DOC_TYPES[d.doc_type] || d.doc_type)}</span>` : "";
+    const caseTxt = d.case_number ? `№${esc(d.case_number)} · ` : "";
     li.innerHTML = `
       <span class="file-ico">${FILE_ICONS[d.file_type] || "📄"}</span>
       <div class="file-info">
         <div class="file-name" title="${esc(d.filename)}">${esc(d.filename)}</div>
-        <div class="file-sub">${d.page_count} sahifa · ${(d.size_bytes/1024).toFixed(0)} KB</div>
+        <div class="file-sub">${typeChip}${caseTxt}${d.page_count} sahifa</div>
       </div>
-      <span class="badge ${badgeCls}">${badgeTxt}</span>
       <button class="file-del" title="O'chirish">✕</button>`;
     li.onclick = () => selectDocument(d.public_id);
     li.querySelector(".file-del").onclick = (e) => {
@@ -249,17 +279,44 @@ function copyActiveText() {
     .catch(() => toast("Nusxalab bo'lmadi (brauzer ruxsati)", "err"));
 }
 
+function renderCourtEdit(doc) {
+  $("#ce-type").value = doc.doc_type || "";
+  $("#ce-case").value = doc.case_number || "";
+  $("#ce-note").value = doc.note || "";
+}
+
+async function saveCourt() {
+  const doc = state.activeDoc;
+  if (!doc) { toast("Avval hujjat tanlang", "err"); return; }
+  try {
+    const updated = await api(`/documents/${doc.public_id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        doc_type: $("#ce-type").value,
+        case_number: $("#ce-case").value.trim(),
+        note: $("#ce-note").value.trim(),
+      }),
+    });
+    state.activeDoc = updated;
+    toast("Saqlandi ✓", "ok");
+    await loadDocuments();      // ro'yxatdagi tur/raqam yangilanadi
+    renderMetaTab(updated);
+  } catch (e) { toast("Saqlashda xato: " + e.message, "err"); }
+}
+
+// doc_metadata ichida edit-formaда ko'rsatiladigan maydonlar (qayta ko'rsatmaymiz)
+const _COURT_KEYS = new Set(["doc_type", "case_number", "note"]);
+
 function renderMetaTab(doc) {
+  renderCourtEdit(doc);
   const grid = $("#meta-results");
   const rows = {
     "Fayl nomi": doc.filename,
     "Turi": doc.file_type.toUpperCase(),
-    "Toifa": doc.category,
-    "MIME": doc.mime_type || "—",
     "Hajmi": `${(doc.size_bytes / 1024).toFixed(1)} KB`,
     "Sahifalar": doc.page_count,
     "Holati": doc.status,
-    "ID": doc.public_id,
+    "Yuklangan ID": doc.public_id,
   };
   grid.innerHTML = "";
   for (const [k, v] of Object.entries(rows)) {
@@ -267,7 +324,7 @@ function renderMetaTab(doc) {
   }
   if (doc.doc_metadata) {
     for (const [k, v] of Object.entries(doc.doc_metadata)) {
-      if (v == null || v === "") continue;
+      if (v == null || v === "" || _COURT_KEYS.has(k)) continue;
       grid.appendChild(el("div", "meta-row",
         `<span class="k">${esc(k)}</span><span class="v">${esc(String(v))}</span>`));
     }
@@ -330,10 +387,13 @@ function renderSearchResults(results, query) {
 }
 
 // ---- AI: summary, entities, chat, export (V5) ----------------------
+let summaryDone = false;
+
 function resetAiTab() {
-  $("#ai-summary").innerHTML = "";
   $("#ai-entities").innerHTML = "";
   $("#chat-log").innerHTML = "";
+  $("#summary-output").innerHTML = "";
+  summaryDone = false;
 }
 
 function _needDoc() {
@@ -341,17 +401,29 @@ function _needDoc() {
   return state.activeDoc;
 }
 
-async function doSummary() {
+// Xulosa tabi — uzun matnning qisqacha mazmuni.
+async function makeSummary() {
   const doc = _needDoc(); if (!doc) return;
-  const box = $("#ai-summary");
+  const box = $("#summary-output");
+  const n = parseInt($("#sum-length").value, 10) || 5;
   box.innerHTML = '<span class="spinner"></span> Xulosa tayyorlanmoqda…';
   try {
     const r = await api("/ai/summarize", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ document_id: doc.id, max_sentences: 5 }),
+      body: JSON.stringify({ document_id: doc.id, max_sentences: n }),
     });
-    box.innerHTML = `<strong>Xulosa (${esc(r.model)}):</strong><br>${esc(r.summary) || "—"}`;
-  } catch (e) { box.innerHTML = `<span class="hint">Xato: ${esc(e.message)}</span>`; }
+    summaryDone = true;
+    if (r.summary && r.summary.trim()) {
+      box.innerHTML =
+        `<div class="sum-text">${esc(r.summary)}</div>` +
+        `<div class="sum-meta">Mexanizm: ${esc(r.model)} · ${n} gap · ` +
+        `${doc.page_count} sahifadan</div>`;
+    } else {
+      box.innerHTML = '<p class="hint">Xulosa uchun matn yetarli emas (hujjat juda qisqa).</p>';
+    }
+  } catch (e) {
+    box.innerHTML = `<span class="hint">Xato: ${esc(e.message)}</span>`;
+  }
 }
 
 async function doEntities() {
@@ -407,13 +479,16 @@ async function doExport(fmt) {
 function switchTab(name) {
   $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
   $$(".tab-pane").forEach((p) => p.classList.toggle("active", p.id === "tab-" + name));
+  // Xulosa tabi ochilsa — avtomatik tayyorlaymiz (agar hujjat bor va hali yo'q bo'lsa).
+  if (name === "summary" && state.activeDoc && !summaryDone) makeSummary();
 }
 
 // ---- engine badge --------------------------------------------------
 async function loadEngineStatus() {
+  const b = $("#engine-badge");
+  if (!b) return;                       // badge endi yashirin
   try {
     const { real_engine } = await api("/ocr/engine");
-    const b = $("#engine-badge");
     b.textContent = real_engine ? "OCR: faol" : "OCR: stub";
     b.className = "badge " + (real_engine ? "badge-green" : "badge-amber");
   } catch (_) {}
@@ -447,11 +522,33 @@ function init() {
   };
   $$(".tab").forEach((t) => (t.onclick = () => switchTab(t.dataset.tab)));
 
+  // Sud hujjat turlari ro'yxatini to'ldiramiz
+  const typeOpts = Object.entries(DOC_TYPES)
+    .map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+  $("#ce-type").innerHTML = `<option value="">— tanlanmagan —</option>` + typeOpts;
+  $("#filter-type").innerHTML = `<option value="">Barcha turlar</option>` + typeOpts;
+
+  // Chap panel filtri (nom + tur)
+  $("#filter-name").addEventListener("input", (e) => {
+    state.filter.name = e.target.value.toLowerCase().trim();
+    renderFileList();
+  });
+  $("#filter-type").addEventListener("change", (e) => {
+    state.filter.type = e.target.value;
+    renderFileList();
+  });
+
+  // Sud maydonlarini saqlash
+  $("#ce-save").onclick = saveCourt;
+
   // Matn tab
   $("#btn-copy-text").onclick = copyActiveText;
 
+  // Xulosa tab
+  $("#btn-make-summary").onclick = makeSummary;
+  $("#sum-length").onchange = makeSummary;
+
   // AI tab (V5)
-  $("#btn-summary").onclick = doSummary;
   $("#btn-entities").onclick = doEntities;
   $("#chat-form").onsubmit = (e) => {
     e.preventDefault();
@@ -461,7 +558,6 @@ function init() {
   $$(".export-btn").forEach((b) => (b.onclick = () => doExport(b.dataset.fmt)));
 
   loadDocuments();
-  loadEngineStatus();
 }
 
 document.addEventListener("DOMContentLoaded", init);

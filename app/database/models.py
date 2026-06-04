@@ -143,6 +143,21 @@ class Document(Base, TimestampMixin):
         back_populates="document", cascade="all, delete-orphan"
     )
 
+    # --- Court-specific fields, stored in doc_metadata (no schema migration) ---
+    @property
+    def doc_type(self) -> str | None:
+        """Court document type: ariza, qaror, bayonnoma, dalil, …"""
+        return (self.doc_metadata or {}).get("doc_type")
+
+    @property
+    def case_number(self) -> str | None:
+        """Associated court case number (ish raqami)."""
+        return (self.doc_metadata or {}).get("case_number")
+
+    @property
+    def note(self) -> str | None:
+        return (self.doc_metadata or {}).get("note")
+
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Document id={self.id} {self.filename!r} status={self.status}>"
 

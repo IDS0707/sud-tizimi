@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -5,74 +6,161 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UDIP — Boshqaruv paneli</title>
   <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>" />
   <style>
-    body { overflow: auto; display: block; background: var(--panel-2); }
-    .admin-wrap { max-width: 1000px; margin: 0 auto; padding: 24px; }
-    .admin-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-    .admin-head h1 { font-size: 22px; margin: 0; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
-    .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
-    .card .num { font-size: 28px; font-weight: 700; color: var(--primary); }
-    .card .lbl { font-size: 12px; color: var(--text-mut); margin-top: 4px; }
-    .section { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 18px; box-shadow: var(--shadow); }
-    .section h2 { font-size: 15px; margin: 0 0 12px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
-    th { color: var(--text-mut); font-weight: 600; }
-    .keybar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-    .keybar input { flex: 1; min-width: 200px; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font: inherit; }
-    .raw-key { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 10px 12px; border-radius: 8px; font-family: monospace; font-size: 13px; word-break: break-all; margin-top: 8px; }
-    .bars { display: grid; gap: 6px; }
-    .bar-row { display: grid; grid-template-columns: 90px 1fr 40px; align-items: center; gap: 8px; font-size: 12px; }
-    .bar { height: 14px; background: var(--primary); border-radius: 4px; min-width: 2px; }
-    .muted { color: var(--text-mut); font-size: 12px; }
+    body { overflow: auto; display: block; background: var(--bg); }
+    .admin-bar { display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 28px; background: linear-gradient(180deg,#2061a8,#1a4d8a);
+      border-bottom: 3px solid var(--gold); color: #fff; }
+    .admin-bar .brand { display: flex; align-items: center; gap: 12px; }
+    .admin-bar .brand-logo { font-size: 22px; width: 42px; height: 42px; display: grid; place-items: center;
+      background: linear-gradient(145deg,#3b82d6,#1c5191); border: 1px solid rgba(255,255,255,.35);
+      border-radius: 11px; }
+    .admin-bar .t { font-size: 18px; font-weight: 700; letter-spacing: .3px; }
+    .admin-bar .s { color: #cfe1f5; font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px; }
+    .admin-wrap { max-width: 1000px; margin: 0 auto; padding: 26px 22px 60px; }
+    .intro { font-size: 14px; color: var(--text-mut); margin: 0 0 22px; line-height: 1.6; }
+
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 26px; }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 16px; }
+    .card .ic { width: 46px; height: 46px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center;
+      background: var(--gold-soft); color: var(--primary); }
+    .card .ic svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .card .num { font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1; }
+    .card .lbl { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 3px; }
+    .card .desc { font-size: 11px; color: var(--text-mut); margin-top: 2px; }
+
+    .section { background: #fff; border: 1px solid var(--border); border-radius: 14px;
+      padding: 22px; margin-bottom: 18px; box-shadow: var(--shadow); }
+    .section h2 { font-size: 16px; margin: 0 0 4px; color: var(--text); }
+    .section .sub { font-size: 12px; color: var(--text-mut); margin: 0 0 16px; }
+    .bars { display: grid; gap: 10px; }
+    .bar-row { display: grid; grid-template-columns: 130px 1fr 44px; align-items: center; gap: 12px; font-size: 13px; }
+    .bar-row .name { font-weight: 600; }
+    .bar-track { background: var(--panel-2); border-radius: 6px; overflow: hidden; height: 18px; }
+    .bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--gold)); border-radius: 6px; min-width: 4px; }
+    .bar-val { text-align: right; font-weight: 700; color: var(--primary); }
+    .muted { color: var(--text-mut); font-size: 13px; }
+    .loading { text-align: center; padding: 40px; color: var(--text-mut); }
+
+    /* Edge icon (FAB) + slide-out drawer for API keys */
+    .keys-fab { position: fixed; right: 0; top: 50%; transform: translateY(-50%);
+      width: 46px; height: 54px; border: none; cursor: pointer;
+      background: linear-gradient(180deg,#2061a8,#1a4d8a); color: #fff;
+      border-radius: 13px 0 0 13px; box-shadow: -2px 3px 14px rgba(20,55,100,.28);
+      display: grid; place-items: center; z-index: 40; transition: width .15s; }
+    .keys-fab:hover { width: 56px; }
+    .keys-fab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .drawer-overlay { position: fixed; inset: 0; background: rgba(18,40,70,.38);
+      opacity: 0; pointer-events: none; transition: .2s; z-index: 45; }
+    .drawer-overlay.show { opacity: 1; pointer-events: auto; }
+    .drawer { position: fixed; top: 0; right: 0; height: 100%; width: 380px; max-width: 92vw;
+      background: #fff; box-shadow: -8px 0 30px rgba(18,55,100,.22); z-index: 46;
+      transform: translateX(100%); transition: transform .25s ease; display: flex; flex-direction: column; }
+    .drawer.show { transform: translateX(0); }
+    .drawer-head { display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; background: linear-gradient(180deg,#2061a8,#1a4d8a); color: #fff; }
+    .drawer-head h3 { margin: 0; font-size: 16px; }
+    .drawer-close { background: rgba(255,255,255,.14); border: none; color: #fff; cursor: pointer;
+      width: 30px; height: 30px; border-radius: 8px; font-size: 14px; }
+    .drawer-close:hover { background: rgba(255,255,255,.28); }
+    .drawer-body { padding: 20px; overflow-y: auto; }
+    .dk-title { font-size: 14px; margin: 18px 0 8px; color: var(--text); }
+    .dk-sub { margin-top: 0; }
+    .dk-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .dk-row input { flex: 1; min-width: 0; border: 1px solid var(--border-2); border-radius: 8px;
+      padding: 9px 11px; font: inherit; font-size: 13px; outline: none; }
+    .dk-row input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(59,130,214,.2); }
+    .raw-key { background: var(--green-bg); border: 1px solid #b6e3c8; color: #145236; padding: 11px 13px;
+      border-radius: 9px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; word-break: break-all; margin: 4px 0 10px; }
+    .kl-item { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .kl-name { font-weight: 600; }
+    .kl-prefix { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--text-mut); }
+    .recent-table td { font-size: 12.5px; }
+    .t-chip { font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--gold-soft); color: var(--primary); }
+    .s-chip { font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
   </style>
 </head>
 <body>
+  <div class="admin-bar">
+    <div class="brand">
+      <span class="brand-logo">⚖️</span>
+      <div>
+        <div class="t">Boshqaruv paneli</div>
+        <div class="s">Tizim holati</div>
+      </div>
+    </div>
+    <a href="/" class="btn btn-ghost">← Asosiy sahifa</a>
+  </div>
+
   <div class="admin-wrap">
-    <div class="admin-head">
-      <h1>⚙️ UDIP — Boshqaruv paneli</h1>
-      <a href="/" class="btn btn-ghost">← Asosiy</a>
-    </div>
+    <p class="intro">
+      Bu sahifa tizimning umumiy holatini ko'rsatadi: nechta hujjat yuklangani,
+      qancha sahifa o'qilgani va qayta ishlanganini bir qarashda ko'rasiz.
+    </p>
 
-    <!-- API key gate -->
-    <div class="section" id="auth-section">
-      <h2>🔑 API kalit</h2>
-      <p class="muted">Statistikani ko'rish uchun yaroqli API kalit kiriting. Kalitingiz yo'q bo'lsa, quyida yangi yarating.</p>
-      <div class="keybar">
-        <input id="apikey-input" type="text" placeholder="udip_..." />
-        <button class="btn btn-primary" onclick="saveKey()">Saqlash</button>
-        <button class="btn btn-ghost" onclick="clearKey()">Tozalash</button>
-      </div>
-      <div class="keybar">
-        <input id="newkey-name" type="text" placeholder="Yangi kalit nomi (masalan: 'Test ilovasi')" />
-        <button class="btn btn-primary" onclick="createKey()">+ Kalit yaratish</button>
-      </div>
-      <div id="raw-key-box"></div>
-    </div>
+    <div id="dashboard">
+      <div class="loading" id="loading">Yuklanmoqda…</div>
+      <div class="cards" id="stat-cards" style="display:none"></div>
 
-    <div id="dashboard" style="display:none">
-      <div class="cards" id="stat-cards"></div>
-
-      <div class="section">
-        <h2>📊 Hujjatlar turi bo'yicha</h2>
+      <div class="section" id="type-section" style="display:none">
+        <h2>Hujjat turlari</h2>
+        <p class="sub">Qaysi turdagi fayllar ko'proq yuklangan.</p>
         <div class="bars" id="type-bars"></div>
       </div>
 
-      <div class="section">
-        <h2>📈 Holati bo'yicha</h2>
+      <div class="section" id="status-section" style="display:none">
+        <h2>Qayta ishlash holati</h2>
+        <p class="sub">Hujjatlar qaysi bosqichда (tahlil qilingan, OCR o'qilgan va h.k.).</p>
         <div class="bars" id="status-bars"></div>
       </div>
 
-      <div class="section">
-        <h2>🔑 API kalitlar</h2>
-        <table id="keys-table">
-          <thead><tr><th>Nomi</th><th>Prefiks</th><th>Holati</th><th>Yaratilgan</th><th>So'nggi</th><th></th></tr></thead>
-          <tbody></tbody>
+      <div class="section" id="recent-section" style="display:none">
+        <h2>So'nggi hujjatlar</h2>
+        <p class="sub">Oxirgi yuklangan hujjatlar ro'yxati.</p>
+        <table class="recent-table">
+          <thead><tr><th>Nomi</th><th>Turi</th><th>Ish raqami</th><th>Holati</th></tr></thead>
+          <tbody id="recent-list"></tbody>
         </table>
       </div>
     </div>
   </div>
+
+  <!-- Ekran chetidagi icon: API kalitlar (dasturchilar uchun) -->
+  <button type="button" class="keys-fab" id="keys-fab" title="API kalitlar">
+    <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="5"></circle><path d="M11.5 11.5 21 2M16 7l3 3M14 9l2 2"></path></svg>
+  </button>
+
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="drawer" id="keys-drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <h3>API kalitlar</h3>
+      <button type="button" class="drawer-close" id="drawer-close" title="Yopish">✕</button>
+    </div>
+    <div class="drawer-body">
+      <p class="muted">
+        API kalitlar — boshqa dasturlarni (mobil ilova, integratsiya) shu tizimga
+        ulash uchun ishlatiladi. Oddiy foydalanish uchun shart emas.
+      </p>
+
+      <h4 class="dk-title">Yangi kalit yaratish</h4>
+      <div class="dk-row">
+        <input id="newkey-name" type="text" placeholder="Kalit nomi (masalan: Mobil ilova)" />
+        <button type="button" class="btn btn-primary btn-sm" id="btn-create-key">Yaratish</button>
+      </div>
+      <div id="raw-key-box"></div>
+
+      <h4 class="dk-title">Mavjud kalitlar</h4>
+      <p class="muted dk-sub">Ro'yxatni ko'rish uchun yaroqli kalitni kiriting:</p>
+      <div class="dk-row">
+        <input id="apikey-input" type="text" placeholder="udip_..." />
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-show-keys">Ko'rsatish</button>
+      </div>
+      <div id="keys-list"></div>
+    </div>
+  </aside>
 
   <div id="toast" class="toast"></div>
   <script src="/static/admin.js"></script>

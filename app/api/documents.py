@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.database.models import Document
 from app.database.session import get_db
-from app.schemas.document import DocumentDetail, DocumentOut
+from app.schemas.document import DocumentDetail, DocumentOut, DocumentUpdate
 from app.services.storage import storage
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -40,6 +40,23 @@ def _get_or_404(db: Session, public_id: str) -> Document:
 @router.get("/{public_id}", response_model=DocumentDetail, summary="Hujjat tafsilotlari")
 def get_document(public_id: str, db: Session = Depends(get_db)) -> DocumentDetail:
     return DocumentDetail.model_validate(_get_or_404(db, public_id))
+
+
+@router.patch("/{public_id}", response_model=DocumentDetail, summary="Sud maydonlarini saqlash")
+def update_document(public_id: str, payload: DocumentUpdate,
+                    db: Session = Depends(get_db)) -> DocumentDetail:
+    """Set/clear court fields (hujjat turi, ish raqami, izoh)."""
+    doc = _get_or_404(db, public_id)
+    meta = dict(doc.doc_metadata or {})
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        if value is None or value == "":
+            meta.pop(key, None)
+        else:
+            meta[key] = value
+    doc.doc_metadata = meta          # reassign so SQLAlchemy detects the change
+    db.commit()
+    db.refresh(doc)
+    return DocumentDetail.model_validate(doc)
 
 
 @router.get("/{public_id}/file", summary="Hujjat faylini ko'rsatish")

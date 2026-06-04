@@ -30,8 +30,7 @@ def _count(db: Session, model) -> int:
     return db.query(func.count()).select_from(model).scalar() or 0
 
 
-@router.get("/stats", response_model=AdminStats, summary="Platforma statistikasi")
-def stats(db: Session = Depends(get_db), _=Depends(require_api_key)) -> AdminStats:
+def _build_stats(db: Session) -> AdminStats:
     by_type = dict(
         db.query(Document.file_type, func.count()).group_by(Document.file_type).all()
     )
@@ -53,3 +52,15 @@ def stats(db: Session = Depends(get_db), _=Depends(require_api_key)) -> AdminSta
         documents_by_status={str(k): int(v) for k, v in by_status.items()},
         total_storage_bytes=int(total_bytes),
     )
+
+
+@router.get("/overview", response_model=AdminStats, summary="Tizim holati (oddiy panel)")
+def overview(db: Session = Depends(get_db)) -> AdminStats:
+    """Open dashboard stats — no API key needed (used by the simple admin panel)."""
+    return _build_stats(db)
+
+
+@router.get("/stats", response_model=AdminStats, summary="Platforma statistikasi (API)")
+def stats(db: Session = Depends(get_db), _=Depends(require_api_key)) -> AdminStats:
+    """Same stats, but requires an API key — for programmatic/SaaS access."""
+    return _build_stats(db)
