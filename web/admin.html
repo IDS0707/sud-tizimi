@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UDIP — Boshqaruv paneli</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    body { overflow: auto; display: block; background: var(--panel-2); }
+    .admin-wrap { max-width: 1000px; margin: 0 auto; padding: 24px; }
+    .admin-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .admin-head h1 { font-size: 22px; margin: 0; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+    .card .num { font-size: 28px; font-weight: 700; color: var(--primary); }
+    .card .lbl { font-size: 12px; color: var(--text-mut); margin-top: 4px; }
+    .section { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 18px; box-shadow: var(--shadow); }
+    .section h2 { font-size: 15px; margin: 0 0 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-mut); font-weight: 600; }
+    .keybar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .keybar input { flex: 1; min-width: 200px; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font: inherit; }
+    .raw-key { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 10px 12px; border-radius: 8px; font-family: monospace; font-size: 13px; word-break: break-all; margin-top: 8px; }
+    .bars { display: grid; gap: 6px; }
+    .bar-row { display: grid; grid-template-columns: 90px 1fr 40px; align-items: center; gap: 8px; font-size: 12px; }
+    .bar { height: 14px; background: var(--primary); border-radius: 4px; min-width: 2px; }
+    .muted { color: var(--text-mut); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="admin-wrap">
+    <div class="admin-head">
+      <h1>⚙️ UDIP — Boshqaruv paneli</h1>
+      <a href="/" class="btn btn-ghost">← Asosiy</a>
+    </div>
+
+    <!-- API key gate -->
+    <div class="section" id="auth-section">
+      <h2>🔑 API kalit</h2>
+      <p class="muted">Statistikani ko'rish uchun yaroqli API kalit kiriting. Kalitingiz yo'q bo'lsa, quyida yangi yarating.</p>
+      <div class="keybar">
+        <input id="apikey-input" type="text" placeholder="udip_..." />
+        <button class="btn btn-primary" onclick="saveKey()">Saqlash</button>
+        <button class="btn btn-ghost" onclick="clearKey()">Tozalash</button>
+      </div>
+      <div class="keybar">
+        <input id="newkey-name" type="text" placeholder="Yangi kalit nomi (masalan: 'Test ilovasi')" />
+        <button class="btn btn-primary" onclick="createKey()">+ Kalit yaratish</button>
+      </div>
+      <div id="raw-key-box"></div>
+    </div>
+
+    <div id="dashboard" style="display:none">
+      <div class="cards" id="stat-cards"></div>
+
+      <div class="section">
+        <h2>📊 Hujjatlar turi bo'yicha</h2>
+        <div class="bars" id="type-bars"></div>
+      </div>
+
+      <div class="section">
+        <h2>📈 Holati bo'yicha</h2>
+        <div class="bars" id="status-bars"></div>
+      </div>
+
+      <div class="section">
+        <h2>🔑 API kalitlar</h2>
+        <table id="keys-table">
+          <thead><tr><th>Nomi</th><th>Prefiks</th><th>Holati</th><th>Yaratilgan</th><th>So'nggi</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="/static/admin.js"></script>
+</body>
+</html>

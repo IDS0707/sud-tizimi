@@ -8,11 +8,13 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api import (
+    admin,
     ai,
     chat,
     documents,
     export,
     formula,
+    keys,
     ocr,
     parse,
     search,
@@ -47,4 +49,6 @@ api_router.include_router(ai.router)
 api_router.include_router(chat.router)
 api_router.include_router(export.router)
 
-# Added in later milestones: admin / API keys.
+# --- V6 subsystems: SaaS — API keys + admin panel ---
+api_router.include_router(keys.router)
+api_router.include_router(admin.router)

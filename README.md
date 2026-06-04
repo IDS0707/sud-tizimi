@@ -107,9 +107,10 @@ So'ng oching:
 - [x] **V3** — Layout tahlili, jadvallarni tanib olish ✅
 - [x] **V4** — Formula OCR, aqlli qidiruv ✅
 - [x] **V5** — AI tahlili, entity, chat (RAG), eksport ✅
-- [ ] **V6** — SaaS, API kalitlari, boshqaruv paneli
+- [x] **V6** — SaaS, API kalitlari, boshqaruv paneli ✅
 
-*(Belgilar bosqichlar tugagan sari yangilanadi.)*
+**🎉 Barcha bosqichlar yakunlandi!** Platforma to'liq ishlaydi:
+brauzer UI (`/`), boshqaruv paneli (`/admin`), API hujjatlari (`/docs`).
 
 ## 📜 Litsenziya
 

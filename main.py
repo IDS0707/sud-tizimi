@@ -34,9 +34,12 @@ async def lifespan(app: FastAPI):
     settings.ensure_dirs()
     # Database tables are created lazily here once the DB layer lands.
     try:
-        from app.database.session import init_db
+        from app.database.session import SessionLocal, init_db
+        from app.services.user_service import ensure_default_admin
 
         init_db()
+        with SessionLocal() as db:
+            ensure_default_admin(db)
         log.info("Database initialised: %s", settings.database_url.split("@")[-1])
     except Exception as exc:  # pragma: no cover - DB layer optional at this stage
         log.warning("Database not initialised yet: %s", exc)
@@ -78,6 +81,15 @@ async def root() -> FileResponse:
     if index.exists():
         return FileResponse(index)
     return JSONResponse({"app": settings.app_name, "version": __version__, "docs": "/docs"})
+
+
+@app.get("/admin", include_in_schema=False)
+async def admin_panel() -> FileResponse:
+    """Serve the admin / management panel (TZ section 6)."""
+    page = WEB_DIR / "admin.html"
+    if page.exists():
+        return FileResponse(page)
+    return JSONResponse({"detail": "admin panel not found"}, status_code=404)
 
 
 @app.get("/api", tags=["health"], summary="Service banner")
