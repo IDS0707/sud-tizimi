@@ -274,6 +274,11 @@ body {
 .result-ctx mark { background: #fff1b8; color: #8a6d12; padding: 0 3px;
   border-radius: 3px; font-weight: 600; }
 .result-page { font-size: 11px; color: var(--text-mut); margin-top: 5px; }
+.conf-chip { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 7px;
+  border-radius: 999px; margin-left: 6px; }
+.conf-hi  { background: var(--green-bg); color: var(--green); }   /* aniq o'qilgan */
+.conf-mid { background: var(--amber-bg); color: var(--amber); }   /* o'rtacha */
+.conf-lo  { background: var(--red-bg);   color: var(--red); }     /* shubhali */
 
 /* legacy OCR boxes (kept for safety) */
 .ocr-box { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
@@ -290,6 +295,29 @@ body {
   border-radius: 6px; display: inline-block; margin-bottom: 8px; font-weight: 700; }
 .text-page-body { white-space: pre-wrap; word-break: break-word; color: var(--text);
   border-left: 3px solid var(--gold); padding-left: 12px; }
+
+/* Word-level OCR view: each word coloured by confidence, clickable */
+.words-wrap { line-height: 2.1; font-size: 14px; }
+.word { cursor: pointer; padding: 1px 3px; border-radius: 4px; transition: .1s;
+  border-bottom: 2px solid transparent; }
+.word:hover { outline: 1.5px solid var(--gold); outline-offset: -1px; }
+.word-hi  { background: #e8f7ee; border-bottom-color: #57b884; }   /* aniq */
+.word-mid { background: #fdf3d9; border-bottom-color: #e0b94e; }   /* o'rtacha */
+.word-lo  { background: #fbe0de; border-bottom-color: #de6b63; color: #9c1f18; font-weight: 600; } /* shubhali */
+
+/* Word detail popup (confidence + cropped image from the original) */
+.word-popup { position: fixed; z-index: 60; display: none; width: 260px;
+  background: #fff; border: 1px solid var(--border-2); border-radius: 12px;
+  box-shadow: var(--shadow-lg); padding: 14px 16px; }
+.word-popup.show { display: block; }
+.wp-close { position: absolute; top: 8px; right: 8px; border: none; background: var(--panel-2);
+  width: 24px; height: 24px; border-radius: 6px; cursor: pointer; color: var(--text-mut); font-size: 12px; }
+.wp-close:hover { background: var(--red-bg); color: var(--red); }
+.wp-row { font-size: 13px; margin-bottom: 6px; }
+.wp-k { color: var(--text-mut); font-size: 12px; }
+.wp-crop { margin-top: 6px; padding: 8px; background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 8px; text-align: center; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+.wp-crop canvas { max-width: 100%; border-radius: 4px; }
 
 /* ---- AI tab ---- */
 .ai-section { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }

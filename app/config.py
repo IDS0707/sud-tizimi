@@ -67,6 +67,10 @@ class Settings(BaseSettings):
     }
 
     # --- OCR ---
+    # Provider: "tesseract" (local, offline) or "gemini" (Google AI Studio).
+    ocr_provider: str = "tesseract"
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
     # Language(s) for OCR. For Tesseract you can combine with "+",
     # e.g. "uzb+rus+eng". For PaddleOCR use a single code like "en"/"ru".
     ocr_lang: str = "uzb+rus+eng"

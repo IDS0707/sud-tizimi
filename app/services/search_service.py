@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.database.models import Document, SearchIndex
+from app.database.models import Document, OcrResult, SearchIndex
 from app.services.index_service import normalize
 from app.utils.logger import get_logger
 
@@ -114,8 +114,32 @@ def search(db: Session, query: str, *, limit: int = 30, offset: int = 0,
     return total, hits[offset:offset + limit]
 
 
-def hit_to_dict(db: Session, hit: Hit) -> dict:
-    """Enrich a hit with its parent document's display fields."""
+def word_confidence(db: Session, page_id: int | None, tokens: list[str]) -> int | None:
+    """OCR confidence (%) for the matched word(s) on a page, if it was OCR-ed.
+
+    Looks up the page's OCR word-boxes and averages the confidence of boxes whose
+    text contains a query token. Falls back to the page's overall OCR confidence.
+    Returns None for non-OCR (digitally-extracted) text — there is no uncertainty.
+    """
+    if not page_id or not tokens:
+        return None
+    ocr = db.query(OcrResult).filter(OcrResult.page_id == page_id).first()
+    if ocr is None or not ocr.boxes:
+        return None
+    confs: list[float] = []
+    for box in ocr.boxes:
+        btext = (box.get("text") or "").lower()
+        if any(t in btext for t in tokens):
+            c = box.get("confidence")
+            if c is not None:
+                confs.append(float(c))
+    if confs:
+        return round(sum(confs) / len(confs) * 100)
+    return round((ocr.confidence or 0) * 100) if ocr.confidence else None
+
+
+def hit_to_dict(db: Session, hit: Hit, query: str = "") -> dict:
+    """Enrich a hit with its parent document's display fields + word confidence."""
     doc = db.get(Document, hit.entry.document_id)
     return {
         "document_id": hit.entry.document_id,
@@ -126,4 +150,5 @@ def hit_to_dict(db: Session, hit: Hit) -> dict:
         "score": round(hit.score, 3),
         "snippet": hit.snippet,
         "context": hit.context,
+        "confidence": word_confidence(db, hit.entry.page_id, _tokens(query)),
     }

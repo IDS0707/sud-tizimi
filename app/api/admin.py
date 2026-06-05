@@ -21,7 +21,10 @@ from app.database.models import (
     User,
 )
 from app.database.session import get_db
-from app.schemas.admin import AdminStats
+from app.ocr import gemini
+from app.ocr.engine import ocr_engine
+from app.schemas.admin import AdminStats, OcrConfig, OcrConfigUpdate
+from app.services import runtime_config
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -64,3 +67,37 @@ def overview(db: Session = Depends(get_db)) -> AdminStats:
 def stats(db: Session = Depends(get_db), _=Depends(require_api_key)) -> AdminStats:
     """Same stats, but requires an API key — for programmatic/SaaS access."""
     return _build_stats(db)
+
+
+def _ocr_config_out() -> OcrConfig:
+    cfg = runtime_config.get_config()
+    return OcrConfig(
+        ocr_provider=cfg["ocr_provider"],
+        gemini_model=cfg["gemini_model"],
+        has_key=bool(cfg["gemini_api_key"]),
+        active_engine=ocr_engine.active_engine,
+    )
+
+
+@router.get("/ocr-config", response_model=OcrConfig, summary="OCR sozlamalari")
+def get_ocr_config() -> OcrConfig:
+    return _ocr_config_out()
+
+
+@router.post("/ocr-config", response_model=OcrConfig, summary="OCR sozlamalarini saqlash")
+def set_ocr_config(payload: OcrConfigUpdate) -> OcrConfig:
+    patch = payload.model_dump(exclude_unset=True)
+    # Empty key string means "leave the existing key as-is".
+    if patch.get("gemini_api_key") == "":
+        patch.pop("gemini_api_key", None)
+    runtime_config.update_config(patch)
+    return _ocr_config_out()
+
+
+@router.post("/ocr-config/test", summary="Gemini kalitini tekshirish")
+def test_ocr_config(payload: OcrConfigUpdate | None = None) -> dict:
+    cfg = runtime_config.get_config()
+    key = (payload.gemini_api_key if payload and payload.gemini_api_key else cfg["gemini_api_key"])
+    model = (payload.gemini_model if payload and payload.gemini_model else cfg["gemini_model"])
+    ok, message = gemini.validate(key or "", model)
+    return {"ok": ok, "message": message}

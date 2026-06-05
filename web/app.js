@@ -247,29 +247,107 @@ function renderTable(rows) {
 function renderTextTab(doc) {
   const box = $("#text-output");
   const info = $("#text-info");
-  const withText = (doc.pages || []).filter((p) => (p.text || "").trim().length);
   const fullText = (doc.pages || []).map((p) => p.text || "").join("\n\n").trim();
   state.activeText = fullText;
 
-  if (!withText.length) {
-    const isImage = doc.category === "image" || doc.file_type === "pdf";
+  // Preload the source image so clicked words can be cropped from it.
+  state.srcImage = null;
+  if (doc.category === "image") {
+    const im = new Image();
+    im.src = `${API}/documents/${doc.public_id}/file`;
+    state.srcImage = im;
+  }
+
+  const hasWords = (doc.pages || []).some((p) => (p.words || []).length);
+  const withText = (doc.pages || []).filter((p) => (p.text || "").trim().length);
+  if (!withText.length && !hasWords) {
     info.textContent = "Matn topilmadi";
-    box.innerHTML = `<p class="hint">Bu hujjatdan matn ajratilmadi.` +
-      (isImage ? " Skan/rasm bo'lsa OCR mexanizmi kerak (Tesseract/PaddleOCR)." : "") +
-      `</p>`;
+    box.innerHTML = `<p class="hint">Bu hujjatdan matn ajratilmadi. ` +
+      `Skan/rasm bo'lsa OCR mexanizmi kerak.</p>`;
     return;
   }
 
-  info.textContent = `${doc.page_count} sahifa · ${fullText.length.toLocaleString()} belgi`;
+  info.innerHTML = `${doc.page_count} sahifa · ${fullText.length.toLocaleString()} belgi` +
+    (hasWords ? ` &nbsp;<span class="muted">— so'z ustiga bosing</span>` : "");
   box.innerHTML = "";
   for (const p of doc.pages) {
-    if (!(p.text || "").trim()) continue;
+    const words = p.words || [];
+    if (!words.length && !(p.text || "").trim()) continue;
     const block = el("div", "text-page");
-    block.innerHTML =
-      `<div class="text-page-num">Sahifa ${p.page_number}</div>` +
-      `<div class="text-page-body">${esc(p.text)}</div>`;
+    block.appendChild(el("div", "text-page-num", `Sahifa ${p.page_number}`));
+    if (words.length) {
+      block.appendChild(renderWords(words));
+    } else {
+      const body = el("div", "text-page-body");
+      body.textContent = p.text || "";
+      block.appendChild(body);
+    }
     box.appendChild(block);
   }
+}
+
+function _confClass(conf) {
+  return conf >= 0.85 ? "word-hi" : conf >= 0.6 ? "word-mid" : "word-lo";
+}
+
+function renderWords(words) {
+  const wrap = el("div", "words-wrap");
+  for (const w of words) {
+    const span = el("span", "word " + _confClass(w.confidence || 0));
+    span.textContent = w.text;
+    span.title = `Aniqlik: ${Math.round((w.confidence || 0) * 100)}%`;
+    span.onclick = () => showWordPopup(w, span);
+    wrap.appendChild(span);
+    wrap.appendChild(document.createTextNode(" "));
+  }
+  return wrap;
+}
+
+function cropWord(word) {
+  const img = state.srcImage;
+  if (!img || !img.complete || !img.naturalWidth || !Array.isArray(word.bbox)) return null;
+  const [x1, y1, x2, y2] = word.bbox;
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const sx = x1 * W, sy = y1 * H, sw = Math.max((x2 - x1) * W, 1), sh = Math.max((y2 - y1) * H, 1);
+  const pad = sh * 0.35;
+  const scale = Math.max(1, Math.min(5, 230 / (sw + pad * 2)));
+  const canvas = el("canvas");
+  canvas.width = Math.round((sw + pad * 2) * scale);
+  canvas.height = Math.round((sh + pad * 2) * scale);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, Math.max(0, sx - pad), Math.max(0, sy - pad),
+                sw + pad * 2, sh + pad * 2, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+function showWordPopup(word, anchor) {
+  let pop = $("#word-popup");
+  if (!pop) { pop = el("div"); pop.id = "word-popup"; pop.className = "word-popup"; document.body.appendChild(pop); }
+  const conf = Math.round((word.confidence || 0) * 100);
+  const chip = conf >= 85 ? "conf-hi" : conf >= 60 ? "conf-mid" : "conf-lo";
+  pop.innerHTML =
+    `<button type="button" class="wp-close" title="Yopish">✕</button>` +
+    `<div class="wp-row"><span class="wp-k">OCR o'qidi:</span> <b>${esc(word.text)}</b></div>` +
+    `<div class="wp-row"><span class="wp-k">Aniqlik:</span> <span class="conf-chip ${chip}">${conf}%</span></div>` +
+    `<div class="wp-k" style="margin-top:8px">Rasmdagi asl yozuv:</div>` +
+    `<div class="wp-crop" id="wp-crop"></div>`;
+  const holder = pop.querySelector("#wp-crop");
+  const draw = () => {
+    const canvas = cropWord(word);
+    holder.innerHTML = "";
+    if (canvas) holder.appendChild(canvas);
+    else holder.innerHTML = '<span class="hint">Rasm bo\'lagi mavjud emas.</span>';
+  };
+  draw();
+  if (state.srcImage && !state.srcImage.complete) state.srcImage.onload = draw;
+  pop.querySelector(".wp-close").onclick = () => pop.classList.remove("show");
+  const r = anchor.getBoundingClientRect();
+  pop.classList.add("show");
+  const pw = pop.offsetWidth || 260, ph = pop.offsetHeight || 200;
+  pop.style.left = Math.max(10, Math.min(window.innerWidth - pw - 10, r.left)) + "px";
+  pop.style.top = Math.max(10, Math.min(window.innerHeight - ph - 10, r.bottom + 8)) + "px";
 }
 
 function copyActiveText() {
@@ -377,10 +455,14 @@ function renderSearchResults(results, query) {
   list.innerHTML = "";
   for (const r of results) {
     const li = el("li", "result-item");
+    const conf = r.confidence != null
+      ? `<span class="conf-chip ${r.confidence >= 85 ? "conf-hi" : r.confidence >= 60 ? "conf-mid" : "conf-lo"}">` +
+        `Aniqlik: ${r.confidence}%</span>`
+      : "";
     li.innerHTML = `
       <div class="result-doc">${esc(r.filename || "Hujjat")}</div>
       <div class="result-ctx">${r.snippet || esc(r.context || "")}</div>
-      <div class="result-page">Sahifa ${r.page_number ?? "—"}</div>`;
+      <div class="result-page">Sahifa ${r.page_number ?? "—"} ${conf}</div>`;
     if (r.public_id) li.onclick = () => selectDocument(r.public_id);
     list.appendChild(li);
   }

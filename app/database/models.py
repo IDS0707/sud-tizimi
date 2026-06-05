@@ -187,6 +187,14 @@ class Page(Base):
         back_populates="page", cascade="all, delete-orphan"
     )
 
+    @property
+    def words(self) -> list:
+        """Per-word OCR boxes [{text, bbox(0..1), confidence}] for this page."""
+        for r in self.ocr_results:
+            if r.boxes:
+                return r.boxes
+        return []
+
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Page doc={self.document_id} #{self.page_number}>"
 

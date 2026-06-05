@@ -17,5 +17,5 @@ def search_documents(req: SearchRequest, db: Session = Depends(get_db)) -> Searc
     total, hits = search_service.search(
         db, req.query, limit=req.limit, offset=req.offset, document_id=req.document_id
     )
-    results = [SearchResultItem(**search_service.hit_to_dict(db, h)) for h in hits]
+    results = [SearchResultItem(**search_service.hit_to_dict(db, h, req.query)) for h in hits]
     return SearchResponse(query=req.query, total=total, results=results)

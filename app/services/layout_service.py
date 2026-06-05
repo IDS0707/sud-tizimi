@@ -116,7 +116,8 @@ def _has_column_gaps(line: list[dict]) -> bool:
     for prev, nxt in zip(line, line[1:]):
         gaps.append(nxt["bbox"][0] - prev["bbox"][2])
     # A column boundary is a gap noticeably larger than an average word width.
-    return any(g > max(avg_w * 0.8, 25) for g in gaps)
+    # (bbox coords are normalised 0..1, so the threshold is purely relative.)
+    return any(g > avg_w * 0.8 for g in gaps)
 
 
 def analyze_page_from_ocr(boxes: list[dict], page_number: int = 1) -> dict:

@@ -18,6 +18,7 @@ class PageOut(BaseModel):
     height: float | None = None
     image_path: str | None = None
     layout: dict | None = None  # {"blocks": [{type, text|rows}, ...]}
+    words: list = []            # OCR word-boxes: [{text, bbox(0..1), confidence}]
 
 
 class DocumentOut(BaseModel):

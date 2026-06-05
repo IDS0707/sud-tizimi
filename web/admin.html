@@ -81,6 +81,20 @@
     .recent-table td { font-size: 12.5px; }
     .t-chip { font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--gold-soft); color: var(--primary); }
     .s-chip { font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+    .ocr-providers { display: grid; gap: 10px; margin: 12px 0; }
+    .prov { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+      border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; transition: .12s; }
+    .prov:hover { border-color: var(--gold); }
+    .prov input { margin-top: 3px; }
+    .prov small { color: var(--text-mut); }
+    .prov.active { border-color: var(--gold); background: var(--gold-soft); }
+    .ocr-input { width: 100%; max-width: 480px; border: 1px solid var(--border-2); border-radius: 8px;
+      padding: 9px 12px; font: inherit; font-size: 13px; outline: none; display: block; margin-bottom: 6px; }
+    .ocr-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(59,130,214,.2); }
+    .ocr-actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .ocr-status { font-size: 12.5px; }
+    .ocr-status.ok { color: var(--green); font-weight: 600; }
+    .ocr-status.err { color: var(--red); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -100,6 +114,36 @@
       Bu sahifa tizimning umumiy holatini ko'rsatadi: nechta hujjat yuklangani,
       qancha sahifa o'qilgani va qayta ishlanganini bir qarashda ko'rasiz.
     </p>
+
+    <div class="section ocr-settings">
+      <h2>OCR mexanizmi — matn o'qish</h2>
+      <p class="sub">Rasm va qo'lyozmadan matnni qaysi tizim o'qishini tanlang.
+        Hozir faol: <b id="ocr-active">…</b></p>
+      <div class="ocr-providers">
+        <label class="prov">
+          <input type="radio" name="prov" value="tesseract" />
+          <span><b>Mahalliy (Tesseract)</b><br>
+            <small>Bepul, internetsiz. Bosma matn yaxshi, qo'lyozma cheklangan.</small></span>
+        </label>
+        <label class="prov">
+          <input type="radio" name="prov" value="gemini" />
+          <span><b>Gemini AI (Google)</b><br>
+            <small>Eng aniq — qo'lyozmani ham o'qiydi. Internet + API kalit kerak.</small></span>
+        </label>
+      </div>
+      <div id="gemini-fields" style="display:none">
+        <label class="ce-label" for="gemini-key">Gemini API kalit
+          (<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a> dan bepul oling)</label>
+        <input id="gemini-key" type="password" class="ocr-input" placeholder="AIza…  (saqlangan kalit yashirin)" />
+        <label class="ce-label" for="gemini-model">Model</label>
+        <input id="gemini-model" type="text" class="ocr-input" placeholder="gemini-2.5-flash" />
+      </div>
+      <div class="ocr-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="ocr-save">Saqlash</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ocr-test">Gemini'ni tekshirish</button>
+        <span id="ocr-status" class="ocr-status"></span>
+      </div>
+    </div>
 
     <div id="dashboard">
       <div class="loading" id="loading">Yuklanmoqda…</div>

@@ -41,6 +41,9 @@ logs/*
 *.sqlite
 *.sqlite3
 
+# --- Runtime config (contains API keys) ---
+runtime_config.json
+
 # --- OS ---
 Thumbs.db
 .DS_Store

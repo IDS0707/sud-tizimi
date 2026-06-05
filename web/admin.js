@@ -196,8 +196,66 @@ async function revokeKey(id) {
 }
 window.revokeKey = revokeKey;  // inline onclick uchun global
 
+// ====================== OCR provider settings ======================
+const ENGINE_LABEL = { gemini: "Gemini AI", tesseract: "Mahalliy (Tesseract)", stub: "—" };
+
+function updateProvUI() {
+  const checked = document.querySelector('input[name="prov"]:checked');
+  document.querySelectorAll(".prov").forEach((p) =>
+    p.classList.toggle("active", p.querySelector("input").checked));
+  $("#gemini-fields").style.display = (checked && checked.value === "gemini") ? "block" : "none";
+}
+
+async function loadOcrConfig() {
+  try {
+    const c = await (await fetch(API + "/admin/ocr-config")).json();
+    $("#ocr-active").textContent = ENGINE_LABEL[c.active_engine] || c.active_engine;
+    const radio = document.querySelector(`input[name="prov"][value="${c.ocr_provider}"]`);
+    if (radio) radio.checked = true;
+    $("#gemini-model").value = c.gemini_model || "gemini-2.5-flash";
+    if (c.has_key) $("#gemini-key").placeholder = "•••• saqlangan — almashtirish uchun yangisini kiriting";
+    updateProvUI();
+  } catch (_) {}
+}
+
+function _ocrBody() {
+  const body = { gemini_model: $("#gemini-model").value.trim() || "gemini-2.5-flash" };
+  const key = $("#gemini-key").value.trim();
+  if (key) body.gemini_api_key = key;
+  return body;
+}
+
+async function saveOcrConfig() {
+  const provider = (document.querySelector('input[name="prov"]:checked') || {}).value || "tesseract";
+  const body = Object.assign({ ocr_provider: provider }, _ocrBody());
+  try {
+    await fetch(API + "/admin/ocr-config", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    toast("OCR sozlamasi saqlandi", "ok");
+    $("#gemini-key").value = "";
+    loadOcrConfig();
+  } catch (e) { toast("Xato: " + e.message, "err"); }
+}
+
+async function testOcrConfig() {
+  const st = $("#ocr-status");
+  st.className = "ocr-status"; st.textContent = "Tekshirilmoqda…";
+  try {
+    const r = await (await fetch(API + "/admin/ocr-config/test", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(_ocrBody()),
+    })).json();
+    st.className = "ocr-status " + (r.ok ? "ok" : "err");
+    st.textContent = r.message;
+  } catch (e) { st.className = "ocr-status err"; st.textContent = "Xato: " + e.message; }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   loadDashboard();
+  loadOcrConfig();
+  document.querySelectorAll('input[name="prov"]').forEach((r) => (r.onchange = updateProvUI));
+  $("#ocr-save").onclick = saveOcrConfig;
+  $("#ocr-test").onclick = testOcrConfig;
   $("#keys-fab").onclick = openDrawer;
   $("#drawer-close").onclick = closeDrawer;
   $("#drawer-overlay").onclick = closeDrawer;

@@ -24,6 +24,7 @@ class SearchResultItem(BaseModel):
     score: float
     snippet: str          # HTML with <mark> around matches
     context: str          # plain-text context
+    confidence: int | None = None   # OCR aniqlik foizi (faqat OCR matni uchun)
 
 
 class SearchResponse(BaseModel):

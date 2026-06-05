@@ -30,6 +30,20 @@ class ApiKeyCreated(ApiKeyOut):
     api_key: str
 
 
+# ---- OCR provider config ------------------------------------------- #
+class OcrConfig(BaseModel):
+    ocr_provider: str            # tesseract | gemini
+    gemini_model: str
+    has_key: bool                # whether a Gemini key is saved (key itself hidden)
+    active_engine: str           # currently active backend
+
+
+class OcrConfigUpdate(BaseModel):
+    ocr_provider: str | None = None
+    gemini_api_key: str | None = None
+    gemini_model: str | None = None
+
+
 # ---- admin stats --------------------------------------------------- #
 class AdminStats(BaseModel):
     documents: int

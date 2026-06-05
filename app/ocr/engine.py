@@ -121,11 +121,47 @@ class _TesseractBackend:
         self._config = ""
 
     def run(self, image_path: str) -> OcrOutput:
+        """Run several OCR variants and keep the best.
+
+        Printed text reads best from the original image (PSM 3); handwriting and
+        faint scans read better from an Otsu-binarised, upscaled image (PSM 6).
+        We try both and pick whichever recognises more text with high confidence,
+        so each image automatically gets the treatment that suits it.
+        """
         from PIL import Image
 
-        img = Image.open(image_path)
+        base = Image.open(image_path)
+        candidates: list[tuple] = [(base, 3)]   # (image, page-segmentation-mode)
+        binarized = self._binarize(image_path)
+        if binarized is not None:
+            candidates.append((binarized, 6))
+        # Handwriting variant: denoise + sharpen + sparse-text mode (PSM 11)
+        # captures scattered, hand-written words far better than the default.
+        handwriting = self._enhance_handwriting(image_path)
+        if handwriting is not None:
+            candidates.append((handwriting, 11))
+
+        best: OcrOutput | None = None
+        best_score = -1.0
+        for img, psm in candidates:
+            out = self._ocr_image(img, psm)
+            # Score = total confidence mass (avg conf × word count): rewards
+            # recognising more words *and* recognising them confidently.
+            score = sum(b["confidence"] for b in out.boxes)
+            if score > best_score:
+                best_score, best = score, out
+        return best or OcrOutput(engine=self.name, lang=self.lang)
+
+    def _ocr_image(self, img, psm: int) -> OcrOutput:
+        # Image size — used to store bounding boxes as normalised 0..1 coords so
+        # they map onto any rendering of the same image (the displayed original),
+        # regardless of the upscaling done during preprocessing.
+        iw, ih = img.size
+        iw = max(iw, 1)
+        ih = max(ih, 1)
         data = self._pt.image_to_data(
-            img, lang=self.lang, config=self._config, output_type=self._pt.Output.DICT
+            img, lang=self.lang, config=f"--psm {psm}",
+            output_type=self._pt.Output.DICT,
         )
         boxes: list[dict] = []
         texts: list[str] = []
@@ -136,7 +172,12 @@ class _TesseractBackend:
             conf = float(data["conf"][i]) / 100.0 if data["conf"][i] not in ("-1", -1) else 0.0
             if text and conf >= settings.ocr_min_confidence:
                 x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
-                boxes.append({"text": text, "bbox": [x, y, x + w, y + h], "confidence": conf})
+                boxes.append({
+                    "text": text,
+                    "bbox": [round(x / iw, 4), round(y / ih, 4),
+                             round((x + w) / iw, 4), round((y + h) / ih, 4)],
+                    "confidence": round(conf, 4),
+                })
                 texts.append(text)
                 confs.append(conf)
         return OcrOutput(
@@ -146,6 +187,71 @@ class _TesseractBackend:
             engine=self.name,
             lang=self.lang,
         )
+
+    @staticmethod
+    def _binarize(image_path: str):
+        """Otsu-binarised + upscaled grayscale image (good for handwriting)."""
+        try:
+            import cv2
+            from PIL import Image
+
+            img = cv2.imread(image_path)
+            if img is None:
+                return None
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            h, w = gray.shape[:2]
+            longest = max(h, w)
+            if longest < 1900:
+                s = 1900 / max(longest, 1)
+                gray = cv2.resize(gray, None, fx=s, fy=s, interpolation=cv2.INTER_CUBIC)
+            _, th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            return Image.fromarray(th)
+        except Exception:  # pragma: no cover - cv2 optional
+            return None
+
+    @staticmethod
+    def _enhance_handwriting(image_path: str):
+        """Upscale + denoise + sharpen grayscale — tuned for pen handwriting."""
+        try:
+            import cv2
+            import numpy as np
+            from PIL import Image
+
+            img = cv2.imread(image_path)
+            if img is None:
+                return None
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            longest = max(gray.shape[:2])
+            if longest < 2200:
+                s = 2200 / max(longest, 1)
+                gray = cv2.resize(gray, None, fx=s, fy=s, interpolation=cv2.INTER_CUBIC)
+            gray = cv2.fastNlMeansDenoising(gray, h=7)
+            sharp = cv2.filter2D(gray, -1, np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]]))
+            return Image.fromarray(sharp)
+        except Exception:  # pragma: no cover
+            return None
+
+
+class _GeminiBackend:
+    """Google AI Studio (Gemini) OCR — best for handwriting. Per-word boxes."""
+
+    name = "gemini"
+    wants_preprocess = False   # send the original image to the model
+
+    def __init__(self, lang: str, cfg: dict) -> None:
+        from app.ocr import gemini as _g
+
+        if not _g.is_configured(cfg):
+            raise RuntimeError("Gemini not configured")
+        self.lang = lang
+        self._g = _g
+        self._key = cfg["gemini_api_key"]
+        self._model = cfg["gemini_model"]
+
+    def run(self, image_path: str) -> OcrOutput:
+        out = self._g.recognize(image_path, api_key=self._key, model=self._model, lang=self.lang)
+        return OcrOutput(text=out["text"], boxes=out["boxes"], confidence=out["confidence"],
+                         engine=out["engine"], lang=out["lang"])
 
 
 class _StubBackend:
@@ -159,17 +265,18 @@ class _StubBackend:
             "No OCR backend installed — returning stub. "
             "Install 'paddleocr' or 'pytesseract'+Tesseract for real OCR."
         )
-        return OcrOutput(
-            text="",
-            boxes=[],
-            confidence=0.0,
-            engine=self.name,
-            lang=self.lang,
-        )
+        return OcrOutput(text="", boxes=[], confidence=0.0, engine=self.name, lang=self.lang)
 
 
-def _build_backend(lang: str):
-    """Pick the best available OCR backend."""
+def _build_backend(lang: str, cfg: dict):
+    """Pick the OCR backend: Gemini if configured, else local engines."""
+    if cfg.get("ocr_provider") == "gemini" and cfg.get("gemini_api_key"):
+        try:
+            backend = _GeminiBackend(lang, cfg)
+            log.info("OCR backend: gemini (model=%s)", cfg.get("gemini_model"))
+            return backend
+        except Exception as exc:
+            log.warning("Gemini backend unavailable, falling back to local: %s", exc)
     for builder in (_PaddleBackend, _TesseractBackend):
         try:
             backend = builder(lang)
@@ -182,24 +289,31 @@ def _build_backend(lang: str):
 
 
 class OcrEngine:
-    """Public OCR facade. Lazily initialises the chosen backend per language."""
+    """Public OCR facade. Re-resolves the backend when runtime config changes."""
 
     def __init__(self) -> None:
         self._backends: dict[str, object] = {}
+        self._sig: tuple | None = None
 
-    def _backend_for(self, lang: str):
+    def _current_backend(self, lang: str):
+        from app.services import runtime_config
+
+        sig = runtime_config.signature()
+        if sig != self._sig:        # provider / key / model changed -> rebuild
+            self._backends.clear()
+            self._sig = sig
         if lang not in self._backends:
-            self._backends[lang] = _build_backend(lang)
+            self._backends[lang] = _build_backend(lang, runtime_config.get_config())
         return self._backends[lang]
 
     def recognize(self, image_path: str | Path, *, lang: str | None = None,
                   preprocess: bool = True) -> OcrOutput:
         """Recognise text in a single image."""
         lang = lang or settings.ocr_lang
+        backend = self._current_backend(lang)
         path = str(image_path)
-        if preprocess:
+        if preprocess and getattr(backend, "wants_preprocess", True):
             path = preprocess_image(path)
-        backend = self._backend_for(lang)
         try:
             return backend.run(path)
         except Exception as exc:  # pragma: no cover - runtime backend failure
@@ -208,8 +322,12 @@ class OcrEngine:
 
     @property
     def is_real(self) -> bool:
-        """True if a real (non-stub) backend is available for the default lang."""
-        return not isinstance(self._backend_for(settings.ocr_lang), _StubBackend)
+        """True if a real (non-stub) backend is active for the default lang."""
+        return not isinstance(self._current_backend(settings.ocr_lang), _StubBackend)
+
+    @property
+    def active_engine(self) -> str:
+        return getattr(self._current_backend(settings.ocr_lang), "name", "stub")
 
 
 # Module-level singleton.
